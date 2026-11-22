@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>EMO | 丕賱乇賵亘賵鬲 丕賱乇賮賷賯</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000000;
+      font-family: 'Cairo', sans-serif;
+      color: #ffffff;
+      touch-action: none;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background-color: #000000;
+    }
+
+    input[type="text"], input[type="password"] {
+      user-select: text;
+    }
+
+    /* Hidden Top Pull-Down Settings Drawer */
+    #secretDrawer {
+      transform: translateY(-100%);
+      transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    #secretDrawer.open {
+      transform: translateY(0%);
+    }
+  </style>
+</head>
+<body class="bg-black overflow-hidden relative">
+
+  <!-- Hidden Computer Vision Elements -->
+  <video id="visionVideo" autoplay playsinline muted class="hidden"></video>
+  <canvas id="visionProcCanvas" width="64" height="48" class="hidden"></canvas>
+
+  <!-- 100% Pure Black Full-Screen Canvas (Eyes + Top Ears Only) -->
+  <canvas id="emoCanvas"></canvas>
+
+  <!-- STEP-BY-STEP EXPLICIT PERMISSION MODAL (Appears on launch, vanishes completely after) -->
+  <div id="permissionOverlay" class="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6 text-center">
+    <div class="w-full max-w-sm bg-zinc-950 border border-zinc-800 rounded-3xl p-6 shadow-2xl space-y-5">
+      <div class="w-14 h-14 mx-auto rounded-2xl bg-cyan-500/10 border border-cyan-400/30 flex items-center justify-center text-2xl">
+        馃
+      </div>
+      <div>
+        <h1 class="text-xl font-black text-cyan-400 mb-1">鬲賮毓賷賱 丨賵丕爻 廿賷賲賵 (EMO)</h1>
+        <p class="text-xs text-zinc-400 leading-relaxed">
+          賱鬲丨賵賷賱 卮丕卮丞 賴丕鬲賮賰 廿賱賶 乇賵亘賵鬲 丨賷賾 亘丕賱賰丕賲賱 亘丿賵賳 兀夭乇丕乇貙 賷乇噩賶 賲賳丨 丕賱兀匕賵賳丕鬲 丕賱鬲丕賱賷丞 禺胤賵丞 亘禺胤賵丞:
+        </p>
+      </div>
+
+      <!-- Permission Items List -->
+      <div class="space-y-3 text-right">
+        <!-- 1. Camera Permission -->
+        <div class="flex items-center justify-between bg-zinc-900/90 p-3.5 rounded-2xl border border-zinc-800">
+          <div class="flex items-center gap-3">
+            <span class="text-xl">馃憗锔�</span>
+            <div>
+              <div class="text-sm font-bold text-white">1. 廿匕賳 丕賱賰丕賲賷乇丕</div>
+              <div class="text-[11px] text-zinc-400">賱鬲鬲亘毓 丨乇賰鬲賰 亘毓賷賳賷賴 賵丕賱卮毓賵乇 亘丕賱馗賱丕賲</div>
+            </div>
+          </div>
+          <button id="btnPermCam" class="px-3.5 py-2 rounded-xl bg-cyan-500 text-black font-bold text-xs active:scale-95 transition">
+            爻賲丕丨
+          </button>
+        </div>
+
+        <!-- 2. Microphone Permission -->
+        <div class="flex items-center justify-between bg-zinc-900/90 p-3.5 rounded-2xl border border-zinc-800">
+          <div class="flex items-center gap-3">
+            <span class="text-xl">馃帣锔�</span>
+            <div>
+              <div class="text-sm font-bold text-white">2. 廿匕賳 丕賱賲賷賰乇賵賮賵賳</div>
+              <div class="text-[11px] text-zinc-400">賱爻賲丕毓 氐賵鬲賰 賵丕賱鬲丨丿孬 賲毓賰 亘丕賱毓乇亘賷丞</div>
+            </div>
+          </div>
+          <button id="btnPermMic" class="px-3.5 py-2 rounded-xl bg-cyan-500 text-black font-bold text-xs active:scale-95 transition">
+            爻賲丕丨
+          </button>
+        </div>
+
+        <!-- 3. Motion & Gyroscope Permission -->
+        <div class="flex items-center justify-between bg-zinc-900/90 p-3.5 rounded-2xl border border-zinc-800">
+          <div class="flex items-center gap-3">
+            <span class="text-xl">馃摫</span>
+            <div>
+              <div class="text-sm font-bold text-white">3. 廿匕賳 丕賱丨乇賰丞 賵丕賱丕賴鬲夭丕夭</div>
+              <div class="text-[11px] text-zinc-400">賱賱卮毓賵乇 亘廿賲丕賱丞 丕賱賴丕鬲賮 兀賵 賴夭賾賴</div>
+            </div>
+          </div>
+          <button id="btnPermMotion" class="px-3.5 py-2 rounded-xl bg-cyan-500 text-black font-bold text-xs active:scale-95 transition">
+            爻賲丕丨
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Gesture Guide -->
+      <div class="bg-zinc-900/50 rounded-2xl p-3 text-[11px] text-zinc-400 space-y-1 text-right border border-zinc-800/60">
+        <div>鈥� <b class="text-zinc-200">丕賱賲爻丨 兀毓賱賶 丕賱卮丕卮丞:</b> 賷丿丕毓亘 乇兀爻賴 賵賷賴夭 兀匕賳賷賴 亘爻毓丕丿丞.</div>
+        <div>鈥� <b class="text-zinc-200">丕賱囟睾胤 丕賱賲胤賵賱 亘兀賷 賲賰丕賳:</b> 賷鬲丨丿孬 賵賷爻鬲賲毓 賱氐賵鬲賰.</div>
+        <div>鈥� <b class="text-zinc-200">丕賱爻丨亘 賲賳 兀毓賱賶 丨丕賮丞 丕賱卮丕卮丞 賱賱兀爻賮賱:</b> 賷賮鬲丨 丕賱廿毓丿丕丿丕鬲 丕賱爻乇賷丞.</div>
+      </div>
+
+      <button id="btnStartEmo" class="w-full py-3.5 rounded-2xl bg-gradient-to-l from-cyan-400 to-blue-500 text-black font-black text-sm shadow-lg shadow-cyan-500/20 active:scale-95 transition">
+        鬲卮睾賷賱 廿賷賲賵 丕賱丌賳 鉁�
+      </button>
+    </div>
+  </div>
+
+  <!-- HIDDEN TOP PULL-DOWN DRAWER (Swipe down from very top edge to open) -->
+  <div id="secretDrawer" class="fixed top-0 inset-x-0 z-40 bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-800 rounded-b-3xl p-5 shadow-2xl">
+    <div class="max-w-md mx-auto space-y-4">
+      <div class="flex items-center justify-between">
+        <span class="text-sm font-black text-cyan-400">鈿欙笍 廿毓丿丕丿丕鬲 廿賷賲賵 丕賱爻乇賷丞</span>
+        <button id="btnCloseDrawer" class="px-3 py-1 rounded-xl bg-zinc-800 text-xs text-zinc-300">廿睾賱丕賯 鈻�</button>
+      </div>
+
+      <!-- Gemini API Key -->
+      <div class="bg-zinc-900 p-3 rounded-2xl border border-zinc-800 space-y-2">
+        <div class="flex justify-between items-center">
+          <label class="text-xs font-bold text-cyan-300">馃 賲賮鬲丕丨 Gemini AI (丕禺鬲賷丕乇賷)</label>
+          <span id="aiStatusTag" class="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400">賵囟毓 兀賵賮賱丕賷賳</span>
+        </div>
+        <input id="geminiKeyInput" type="password" placeholder="丕賱氐賯 賲賮鬲丕丨 AIzaSy... 賴賳丕" class="w-full bg-black text-white text-xs px-3 py-2 rounded-xl border border-zinc-700 font-mono focus:outline-none focus:border-cyan-400" />
+        <div class="flex justify-between items-center">
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-[11px] text-cyan-400 underline">噩賱亘 賲賮鬲丕丨 賲噩丕賳賷</a>
+          <button id="btnSaveKey" class="px-3 py-1.5 rounded-xl bg-cyan-500 text-black font-bold text-xs">丨賮馗</button>
+        </div>
+      </div>
+
+      <!-- Eye & Ear Neon Color Picker -->
+      <div>
+        <label class="block text-xs font-bold text-zinc-300 mb-2">馃帹 賱賵賳 丕賱毓賷賵賳 賵丕賱兀匕賳賷賳</label>
+        <div class="grid grid-cols-5 gap-2">
+          <button data-color="#00f3ff" class="neon-swatch h-9 rounded-xl bg-[#00f3ff] border-2 border-white"></button>
+          <button data-color="#10b981" class="neon-swatch h-9 rounded-xl bg-[#10b981] border-2 border-transparent"></button>
+          <button data-color="#ff007f" class="neon-swatch h-9 rounded-xl bg-[#ff007f] border-2 border-transparent"></button>
+          <button data-color="#f59e0b" class="neon-swatch h-9 rounded-xl bg-[#f59e0b] border-2 border-transparent"></button>
+          <button data-color="#a855f7" class="neon-swatch h-9 rounded-xl bg-[#a855f7] border-2 border-transparent"></button>
+        </div>
+      </div>
+
+      <!-- Re-open Permissions & Continuous Listen Toggle -->
+      <div class="flex items-center justify-between gap-2 pt-1">
+        <button id="btnReopenPerms" class="flex-1 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-xs text-zinc-200 font-bold">
+          馃攼 廿丿丕乇丞 丕賱兀匕賵賳丕鬲
+        </button>
+        <button id="btnToggleAutoListen" class="flex-1 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-xs text-cyan-300 font-bold">
+          馃帣锔� 丕爻鬲賲丕毓 賲爻鬲賲乇: 廿賷賯丕賮
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * ============================================================================
+     * EMO PURE-BLACK 2D COMPANION ENGINE
+     * - 100% Pure Black (#000000) background, zero visible HUD or buttons.
+     * - Glowing expressive vector eyes + animated top robotic ears/headphones.
+     * - Explicit permission flow for Camera, Microphone, and Motion/Gyroscope.
+     * - Full touch, voice, vision, tilt/shake, offline Arabic AI & Gemini AI.
+     * ============================================================================
+     */
+
+    // ============================================================================
+    // 1. PROCEDURAL ROBOTIC SOUND ENGINE (WEB AUDIO API)
+    // ============================================================================
+    class EmoSound {
+      constructor() {
+        this.ctx = null;
+      }
+
+      unlock() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      tone(f1, f2, dur, type = 'sine', vol = 0.16, delay = 0) {
+        this.unlock();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime + delay;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = type;
+        osc.frequency.setValueAtTime(f1, now);
+        if (f2 !== f1) {
+          osc.frequency.exponentialRampToValueAtTime(Math.max(25, f2), now + dur);
+        }
+
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(vol, now + dur * 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + dur + 0.02);
+      }
+
+      playEmotion(emo) {
+        switch (emo) {
+          case 'HAPPY':
+            this.tone(540, 920, 0.11, 'sine', 0.15, 0);
+            this.tone(820, 1260, 0.16, 'triangle', 0.15, 0.1);
+            break;
+          case 'LOVE':
+            this.tone(440, 660, 0.14, 'sine', 0.14, 0);
+            this.tone(660, 880, 0.18, 'sine', 0.14, 0.12);
+            this.tone(880, 1180, 0.22, 'sine', 0.14, 0.24);
+            break;
+          case 'PURR':
+            this.tone(130, 175, 0.18, 'triangle', 0.13, 0);
+            this.tone(150, 200, 0.22, 'triangle', 0.13, 0.15);
+            break;
+          case 'CURIOUS':
+            this.tone(390, 740, 0.22, 'sine', 0.14, 0);
+            break;
+          case 'SCARED':
+            this.tone(950, 310, 0.18, 'sawtooth', 0.13, 0);
+            this.tone(880, 260, 0.18, 'sawtooth', 0.13, 0.13);
+            break;
+          case 'ANGRY':
+            this.tone(210, 130, 0.26, 'sawtooth', 0.16, 0);
+            break;
+          case 'DIZZY':
+            for (let i = 0; i < 4; i++) {
+              this.tone(620 - i * 75, 310 + i * 65, 0.11, 'sine', 0.11, i * 0.09);
+            }
+            break;
+          case 'LISTEN':
+            this.tone(520, 780, 0.09, 'sine', 0.12, 0);
+            break;
+          case 'BLINK':
+            this.tone(640, 500, 0.04, 'sine', 0.05, 0);
+            break;
+        }
+      }
+    }
+
+    // ============================================================================
+    // 2. SPEECH & VOICE ENGINE (ARABIC STT + TTS)
+    // ============================================================================
+    class EmoVoice {
+      constructor(emo) {
+        this.emo = emo;
+        this.recognition = null;
+        this.isListening = false;
+        this.isSpeaking = false;
+        this.continuousMode = false;
+        this.micGranted = false;
+        this.setupRecognition();
+      }
+
+      setupRecognition() {
+        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRec) return;
+
+        this.recognition = new SpeechRec();
+        this.recognition.lang = 'ar-SA';
+        this.recognition.continuous = false;
+        this.recognition.interimResults = false;
+
+        this.recognition.onstart = () => {
+          this.isListening = true;
+          this.emo.face.setEmotion('LISTEN');
+          this.emo.sound.playEmotion('LISTEN');
+        };
+
+        this.recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript.trim();
+          if (transcript) {
+            this.emo.brain.respondTo(transcript);
+          }
+        };
+
+        this.recognition.onerror = () => {
+          this.isListening = false;
+          if (this.emo.face.emotion === 'LISTEN') {
+            this.emo.face.setEmotion('NEUTRAL');
+          }
+        };
+
+        this.recognition.onend = () => {
+          this.isListening = false;
+          if (this.emo.face.emotion === 'LISTEN') {
+            this.emo.face.setEmotion('NEUTRAL');
+          }
+          if (this.continuousMode && !this.isSpeaking) {
+            setTimeout(() => this.startListening(), 400);
+          }
+        };
+      }
+
+      async requestPermission() {
+        this.emo.sound.unlock();
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach(t => t.stop());
+          this.micGranted = true;
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      startListening() {
+        if (!this.recognition || this.isListening) return;
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        try {
+          this.recognition.start();
+        } catch (e) {}
+      }
+
+      stopListening() {
+        if (this.recognition && this.isListening) {
+          try {
+            this.recognition.stop();
+          } catch (e) {}
+        }
+      }
+
+      speak(text) {
+        if (!('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel();
+
+        const clean = text.replace(/[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F300}-\u{1F5FF}]/gu, '');
+        const utter = new SpeechSynthesisUtterance(clean);
+        utter.lang = 'ar-SA';
+        utter.pitch = 1.38; // Cute EMO robotic pitch
+        utter.rate = 1.06;
+
+        const voices = window.speechSynthesis.getVoices();
+        const arVoice = voices.find(v => v.lang.includes('ar'));
+        if (arVoice) utter.voice = arVoice;
+
+        utter.onstart = () => { this.isSpeaking = true; };
+        utter.onend = () => {
+          this.isSpeaking = false;
+          if (this.continuousMode) {
+            setTimeout(() => this.startListening(), 350);
+          }
+        };
+        utter.onerror = () => { this.isSpeaking = false; };
+
+        window.speechSynthesis.speak(utter);
+      }
+    }
+
+    // ============================================================================
+    // 3. COMPUTER VISION ENGINE (BACKGROUND FACE/MOTION & DARKNESS TRACKING)
+    // ============================================================================
+    class EmoVision {
+      constructor(emo) {
+        this.emo = emo;
+        this.active = false;
+        this.video = document.getElementById('visionVideo');
+        this.canvas = document.getElementById('visionProcCanvas');
+        this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+        this.prevFrame = null;
+        this.darkCount = 0;
+        this.isDark = false;
+      }
+
+      async requestPermission() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user', width: 160, height: 120 },
+            audio: false
+          });
+          this.video.srcObject = stream;
+          await this.video.play();
+          this.active = true;
+          this.process();
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      process() {
+        if (!this.active) return;
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+
+        this.ctx.save();
+        this.ctx.scale(-1, 1);
+        this.ctx.drawImage(this.video, -w, 0, w, h);
+        this.ctx.restore();
+
+        const data = this.ctx.getImageData(0, 0, w, h).data;
+        let lumSum = 0;
+        let sumX = 0, sumY = 0, weight = 0;
+
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const i = (y * w + x) * 4;
+            const lum = (data[i] + data[i + 1] + data[i + 2]) / 3;
+            lumSum += lum;
+
+            if (this.prevFrame) {
+              const pLum = (this.prevFrame[i] + this.prevFrame[i + 1] + this.prevFrame[i + 2]) / 3;
+              const diff = Math.abs(lum - pLum);
+              if (diff > 20) {
+                sumX += x * diff;
+                sumY += y * diff;
+                weight += diff;
+              }
+            }
+          }
+        }
+
+        const avgLum = lumSum / (w * h);
+
+        // Darkness detection (covering camera lens)
+        if (avgLum < 16) {
+          this.darkCount++;
+          if (this.darkCount > 22 && !this.isDark) {
+            this.isDark = true;
+            this.emo.face.setEmotion('SCARED', 4.0);
+            this.emo.sound.playEmotion('SCARED');
+            this.emo.voice.speak('賷丕 廿賱賴賷! 賲賳 兀胤賮兀 丕賱賳賵乇責 賱丕 兀乇賶 卮賷卅丕賸!');
+          }
+        } else {
+          if (this.isDark && avgLum > 32) {
+            this.isDark = false;
+            this.emo.face.setEmotion('HAPPY', 2.5);
+            this.emo.sound.playEmotion('HAPPY');
+          }
+          this.darkCount = 0;
+        }
+
+        // Track movement -> Move EMO's eyes & tilt ears toward user
+        if (weight > 750 && !this.isDark) {
+          const nx = ((sumX / weight) / w) * 2 - 1;
+          const ny = ((sumY / weight) / h) * 2 - 1;
+          this.emo.face.setLookTarget(nx * 1.35, ny * 1.15);
+        }
+
+        this.prevFrame = new Uint8ClampedArray(data);
+        requestAnimationFrame(() => this.process());
+      }
+    }
+
+    // ============================================================================
+    // 4. MOTION & GYROSCOPE ENGINE (TILT PARALLAX & SHAKE DIZZY)
+    // ============================================================================
+    class EmoSensors {
+      constructor(emo) {
+        this.emo = emo;
+        this.active = false;
+        this.lastShake = 0;
+      }
+
+      async requestPermission() {
+        try {
+          if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+            const res = await DeviceMotionEvent.requestPermission();
+            if (res !== 'granted') return false;
+          }
+          if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            await DeviceOrientationEvent.requestPermission();
+          }
+        } catch {
+          return false;
+        }
+
+        if (!this.active) {
+          window.addEventListener('deviceorientation', (e) => this.onTilt(e));
+          window.addEventListener('devicemotion', (e) => this.onShake(e));
+          this.active = true;
+        }
+        return true;
+      }
+
+      onTilt(e) {
+        if (e.gamma === null || e.beta === null) return;
+        const tx = Math.max(-1, Math.min(1, e.gamma / 32));
+        const ty = Math.max(-1, Math.min(1, (e.beta - 45) / 32));
+        if (!this.emo.vision.active) {
+          this.emo.face.setLookTarget(tx, ty);
+        }
+        this.emo.face.gravityTilt = tx;
+      }
+
+      onShake(e) {
+        const acc = e.accelerationIncludingGravity || e.acceleration;
+        if (!acc) return;
+        const mag = Math.sqrt((acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2);
+        const now = Date.now();
+        if (mag > 24 && now - this.lastShake > 2600) {
+          this.lastShake = now;
+          this.emo.face.setEmotion('DIZZY', 3.8);
+          this.emo.sound.playEmotion('DIZZY');
+          this.emo.face.spawnParticles('STAR', 7);
+          this.emo.voice.speak('賵丕丕丕賵! 丕賱丿賳賷丕 鬲丿賵乇 亘賷! 賱丕 鬲賴夭賳賷 亘賯賵丞!');
+        }
+      }
+    }
+
+    // ============================================================================
+    // 5. PURE BLACK 60FPS CANVAS ENGINE (EYES & ANIMATED TOP EARS ONLY)
+    // ============================================================================
+    class EmoFaceCanvas {
+      constructor(emo) {
+        this.emo = emo;
+        this.canvas = document.getElementById('emoCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.w = window.innerWidth;
+        this.h = window.innerHeight;
+
+        this.color = localStorage.getItem('emo_color') || '#00f3ff';
+        this.emotion = 'NEUTRAL';
+        this.emotionTimer = 0;
+        this.time = 0;
+
+        // Smooth Spring Gaze
+        this.lookX = 0;
+        this.lookY = 0;
+        this.targetLookX = 0;
+        this.targetLookY = 0;
+        this.gravityTilt = 0;
+
+        // Blinking
+        this.blink = 0;
+        this.nextBlink = 2.8;
+
+        // Animated Top Ears Physics (Angle in radians & extension)
+        this.leftEarAngle = 0;
+        this.rightEarAngle = 0;
+        this.targetLeftEarAngle = 0;
+        this.targetRightEarAngle = 0;
+        this.earLift = 0;
+        this.targetEarLift = 0;
+
+        // Particles (Hearts, Stars, Notes)
+        this.particles = [];
+
+        // Touch & Gesture State
+        this.touchStartY = 0;
+        this.touchStartTime = 0;
+        this.holdTimer = null;
+        this.isHoldingVoice = false;
+        this.isPetting = false;
+        this.petSteps = 0;
+        this.eyePokes = 0;
+        this.lastPoke = 0;
+
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        this.bindGestures();
+      }
+
+      resize() {
+        const dpr = window.devicePixelRatio || 1;
+        this.w = window.innerWidth;
+        this.h = window.innerHeight;
+        this.canvas.width = this.w * dpr;
+        this.canvas.height = this.h * dpr;
+        this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      setColor(hex) {
+        this.color = hex;
+        localStorage.setItem('emo_color', hex);
+      }
+
+      setLookTarget(x, y) {
+        this.targetLookX = Math.max(-1, Math.min(1, x));
+        this.targetLookY = Math.max(-1, Math.min(1, y));
+      }
+
+      setEmotion(emo, duration = 0) {
+        this.emotion = emo;
+        this.emotionTimer = duration;
+      }
+
+      spawnParticles(type, count = 4) {
+        const cx = this.w / 2;
+        const cy = this.h * 0.45;
+        for (let i = 0; i < count; i++) {
+          this.particles.push({
+            type,
+            x: cx + (Math.random() - 0.5) * (this.w * 0.65),
+            y: cy + (Math.random() - 0.5) * 90,
+            vx: (Math.random() - 0.5) * 1.6,
+            vy: -1.4 - Math.random() * 1.6,
+            size: 18 + Math.random() * 10,
+            alpha: 1
+          });
+        }
+      }
+
+      bindGestures() {
+        const getXY = (e) => {
+          const t = e.touches ? e.touches[0] : e;
+          return { x: t.clientX, y: t.clientY };
+        };
+
+        const onDown = (e) => {
+          this.emo.sound.unlock();
+          const { x, y } = getXY(e);
+          this.touchStartY = y;
+          this.touchStartTime = Date.now();
+
+          // Look at finger
+          this.setLookTarget((x / this.w) * 2 - 1, (y / this.h) * 2 - 1);
+
+          // Top head area (between/below ears) -> Petting
+          if (y < this.h * 0.34) {
+            this.isPetting = true;
+            this.petSteps = 0;
+          }
+
+          // Long press anywhere -> Voice Listen Mode
+          clearTimeout(this.holdTimer);
+          this.holdTimer = setTimeout(() => {
+            if (!this.isPetting) {
+              this.isHoldingVoice = true;
+              this.emo.voice.startListening();
+            }
+          }, 420);
+        };
+
+        const onMove = (e) => {
+          const { x, y } = getXY(e);
+          this.setLookTarget((x / this.w) * 2 - 1, (y / this.h) * 2 - 1);
+
+          // Swipe down from top edge -> Open secret settings drawer
+          if (this.touchStartY < 45 && (y - this.touchStartY) > 75) {
+            clearTimeout(this.holdTimer);
+            document.getElementById('secretDrawer').classList.add('open');
+            return;
+          }
+
+          // Rubbing forehead -> Blissful petting + ear wiggle
+          if (this.isPetting) {
+            this.petSteps++;
+            if (this.petSteps % 12 === 0) {
+              this.setEmotion('LOVE', 2.4);
+              this.emo.sound.playEmotion('PURR');
+              this.spawnParticles('HEART', 2);
+            }
+          }
+        };
+
+        const onUp = (e) => {
+          clearTimeout(this.holdTimer);
+
+          if (this.isHoldingVoice) {
+            this.isHoldingVoice = false;
+            this.emo.voice.stopListening();
+            return;
+          }
+
+          const elapsed = Date.now() - this.touchStartTime;
+          // Quick tap on eyes
+          if (!this.isPetting && elapsed < 260) {
+            const cy = this.h * 0.52;
+            if (Math.abs(this.touchStartY - cy) < this.h * 0.16) {
+              const now = Date.now();
+              this.eyePokes = (now - this.lastPoke < 1500) ? this.eyePokes + 1 : 1;
+              this.lastPoke = now;
+
+              if (this.eyePokes >= 3) {
+                this.setEmotion('ANGRY', 2.4);
+                this.emo.sound.playEmotion('ANGRY');
+              } else {
+                this.blink = 1;
+                this.emo.sound.playEmotion('BLINK');
+              }
+            }
+          }
+
+          this.isPetting = false;
+        };
+
+        this.canvas.addEventListener('mousedown', onDown);
+        this.canvas.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+
+        this.canvas.addEventListener('touchstart', onDown, { passive: true });
+        this.canvas.addEventListener('touchmove', onMove, { passive: true });
+        window.addEventListener('touchend', onUp);
+      }
+
+      update(dt) {
+        this.time += dt;
+
+        if (this.emotionTimer > 0) {
+          this.emotionTimer -= dt;
+          if (this.emotionTimer <= 0 && this.emotion !== 'SLEEPY') {
+            this.setEmotion('NEUTRAL');
+          }
+        }
+
+        // Autonomous natural eye glances when idle
+        if (!this.emo.vision.active && this.emotion === 'NEUTRAL' && Math.random() < 0.012) {
+          this.setLookTarget((Math.random() - 0.5) * 1.1, (Math.random() - 0.5) * 0.7);
+        }
+
+        // Smooth Spring Gaze
+        this.lookX += (this.targetLookX - this.lookX) * Math.min(1, dt * 8.5);
+        this.lookY += (this.targetLookY - this.lookY) * Math.min(1, dt * 8.5);
+
+        // Natural Blinking
+        this.nextBlink -= dt;
+        if (this.nextBlink <= 0 && this.emotion !== 'SLEEPY') {
+          this.blink = 1;
+          this.nextBlink = 2.4 + Math.random() * 3.4;
+        }
+        if (this.blink > 0) {
+          this.blink = Math.max(0, this.blink - dt * 7.5);
+        }
+
+        // ========================================================================
+        // DYNAMIC TOP EARS / HEADPHONES KINEMATICS BASED ON EMOTION
+        // ========================================================================
+        const idleBreath = Math.sin(this.time * 2.2) * 0.04;
+        const gazeInfluence = this.lookX * 0.12;
+
+        switch (this.emotion) {
+          case 'HAPPY':
+          case 'LOVE':
+            // Joyful rhythmic ear wiggle!
+            this.targetLeftEarAngle = -0.18 + Math.sin(this.time * 12) * 0.16;
+            this.targetRightEarAngle = 0.18 - Math.sin(this.time * 12) * 0.16;
+            this.targetEarLift = -10;
+            break;
+          case 'CURIOUS':
+            // One ear perks up, the other tilts inquisitively
+            this.targetLeftEarAngle = -0.25;
+            this.targetRightEarAngle = -0.08;
+            this.targetEarLift = -14;
+            break;
+          case 'SCARED':
+            // Ears flatten backward sharply in shock
+            this.targetLeftEarAngle = 0.34;
+            this.targetRightEarAngle = -0.34;
+            this.targetEarLift = 12;
+            break;
+          case 'ANGRY':
+            // Aggressive forward/downward tilt
+            this.targetLeftEarAngle = 0.28;
+            this.targetRightEarAngle = -0.28;
+            this.targetEarLift = 8;
+            break;
+          case 'SLEEPY':
+            // Ears droop down heavily
+            this.targetLeftEarAngle = 0.32;
+            this.targetRightEarAngle = -0.32;
+            this.targetEarLift = 16;
+            break;
+          case 'DIZZY':
+            // Ears wobble out of phase
+            this.targetLeftEarAngle = Math.sin(this.time * 14) * 0.3;
+            this.targetRightEarAngle = Math.cos(this.time * 14) * 0.3;
+            this.targetEarLift = 0;
+            break;
+          case 'LISTEN':
+          case 'DANCE':
+            // Ears perk up alertly and pulse with audio
+            this.targetLeftEarAngle = -0.22 + Math.sin(this.time * 10) * 0.08;
+            this.targetRightEarAngle = 0.22 - Math.sin(this.time * 10) * 0.08;
+            this.targetEarLift = -12;
+            break;
+          default:
+            // Calm breathing + slight follow of gaze/gravity
+            this.targetLeftEarAngle = idleBreath + gazeInfluence;
+            this.targetRightEarAngle = -idleBreath + gazeInfluence;
+            this.targetEarLift = 0;
+        }
+
+        this.leftEarAngle += (this.targetLeftEarAngle - this.leftEarAngle) * Math.min(1, dt * 10);
+        this.rightEarAngle += (this.targetRightEarAngle - this.rightEarAngle) * Math.min(1, dt * 10);
+        this.earLift += (this.targetEarLift - this.earLift) * Math.min(1, dt * 8);
+
+        // Update Floating Particles
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+          const p = this.particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.alpha -= dt * 0.65;
+          if (p.alpha <= 0) this.particles.splice(i, 1);
+        }
+      }
+
+      drawRoundedRect(ctx, x, y, w, h, r) {
+        const radius = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.arcTo(x + w, y, x + w, y + h, radius);
+        ctx.arcTo(x + w, y + h, x, y + h, radius);
+        ctx.arcTo(x, y + h, x, y, radius);
+        ctx.arcTo(x, y, x + w, y, radius);
+        ctx.closePath();
+      }
+
+      render() {
+        const ctx = this.ctx;
+        // 100% Pure Pitch Black Background (#000000)
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, this.w, this.h);
+
+        // 1. Render Top Robotic Ears / Headphones
+        this.renderTopEars(ctx);
+
+        // 2. Render Two Expressive Glowing Eyes ONLY (No mouth, no nose, no outline)
+        const eyeSpacing = Math.min(this.w * 0.24, 115);
+        const eyeW = Math.min(this.w * 0.27, 118);
+        const eyeH = Math.min(this.w * 0.34, 148);
+
+        const gazeOffsetX = this.lookX * (this.w * 0.065);
+        const gazeOffsetY = this.lookY * (this.h * 0.055);
+        const breathY = Math.sin(this.time * 2.2) * 4;
+
+        const leftX = this.w / 2 - eyeSpacing + gazeOffsetX;
+        const rightX = this.w / 2 + eyeSpacing + gazeOffsetX;
+        const eyesY = this.h * 0.53 + gazeOffsetY + breathY;
+
+        this.renderEye(ctx, leftX, eyesY, eyeW, eyeH, true);
+        this.renderEye(ctx, rightX, eyesY, eyeW, eyeH, false);
+
+        // 3. Render Particles (Hearts/Stars)
+        this.renderParticles(ctx);
+      }
+
+      renderTopEars(ctx) {
+        const earW = Math.min(this.w * 0.16, 68);
+        const earH = Math.min(this.h * 0.14, 105);
+        const topY = Math.max(26, this.h * 0.07) + this.earLift;
+        const leftAnchorX = Math.max(24, this.w * 0.11);
+        const rightAnchorX = this.w - Math.max(24, this.w * 0.11);
+
+        const isAudioActive = this.emo.voice.isListening || this.emo.voice.isSpeaking || this.emotion === 'DANCE';
+        const pulseScale = isAudioActive ? 1 + Math.sin(this.time * 18) * 0.07 : 1;
+
+        const drawSingleEar = (anchorX, anchorY, angle, isLeft) => {
+          ctx.save();
+          ctx.translate(anchorX, anchorY + earH * 0.65);
+          ctx.rotate(angle);
+          ctx.scale(pulseScale, pulseScale);
+
+          // Ear Base Mount (Dark Metallic Housing)
+          ctx.fillStyle = '#0c1017';
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+          ctx.lineWidth = 2;
+          this.drawRoundedRect(ctx, -earW / 2, -earH * 0.65, earW, earH, 22);
+          ctx.fill();
+          ctx.stroke();
+
+          // Glowing Neon Ear Accent Strip / Ring (EMO Headphone Style)
+          ctx.shadowColor = this.color;
+          ctx.shadowBlur = isAudioActive ? 24 : 14;
+          ctx.fillStyle = this.color;
+
+          const stripW = earW * 0.28;
+          const stripH = earH * 0.62;
+          const stripX = isLeft ? -earW * 0.18 : earW * 0.18 - stripW;
+          this.drawRoundedRect(ctx, stripX, -earH * 0.46, stripW, stripH, 10);
+          ctx.fill();
+
+          // Subtle inner highlight
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+          this.drawRoundedRect(ctx, stripX + stripW * 0.25, -earH * 0.4, stripW * 0.35, stripH * 0.35, 4);
+          ctx.fill();
+
+          ctx.restore();
+        };
+
+        drawSingleEar(leftAnchorX, topY, this.leftEarAngle, true);
+        drawSingleEar(rightAnchorX, topY, this.rightEarAngle, false);
+      }
+
+      renderEye(ctx, cx, cy, w, h, isLeft) {
+        ctx.save();
+        ctx.shadowColor = this.color;
+        ctx.shadowBlur = 28;
+        ctx.fillStyle = this.color;
+        ctx.strokeStyle = this.color;
+
+        // 1. SLEEPY / BLINKING
+        if (this.emotion === 'SLEEPY' || this.blink > 0.75) {
+          ctx.lineWidth = 8;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.arc(cx, cy, w * 0.44, 0.14 * Math.PI, 0.86 * Math.PI);
+          ctx.stroke();
+          ctx.restore();
+          return;
+        }
+
+        // 2. HAPPY JOYFUL ARCHES (^ ^)
+        if (this.emotion === 'HAPPY' || this.emotion === 'DANCE') {
+          ctx.lineWidth = 10;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.arc(cx, cy + h * 0.16, w * 0.45, Math.PI * 1.12, Math.PI * 1.88);
+          ctx.stroke();
+          ctx.restore();
+          return;
+        }
+
+        // 3. LOVE HEART EYES
+        if (this.emotion === 'LOVE') {
+          const s = w * 0.58;
+          ctx.fillStyle = '#ff1770';
+          ctx.shadowColor = '#ff1770';
+          ctx.beginPath();
+          ctx.moveTo(cx, cy + s * 0.36);
+          ctx.bezierCurveTo(cx - s, cy - s * 0.42, cx - s * 0.5, cy - s, cx, cy - s * 0.45);
+          ctx.bezierCurveTo(cx + s * 0.5, cy - s, cx + s, cy - s * 0.42, cx, cy + s * 0.36);
+          ctx.fill();
+          ctx.restore();
+          return;
+        }
+
+        // 4. DIZZY SPIRALS
+        if (this.emotion === 'DIZZY') {
+          ctx.lineWidth = 5;
+          ctx.beginPath();
+          const dir = isLeft ? 1 : -1;
+          for (let a = 0; a < Math.PI * 5; a += 0.2) {
+            const r = (a / (Math.PI * 5)) * (w * 0.48);
+            const px = cx + Math.cos(a * dir + this.time * 9) * r;
+            const py = cy + Math.sin(a * dir + this.time * 9) * r;
+            if (a === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+          ctx.restore();
+          return;
+        }
+
+        // 5. STANDARD & EXPRESSIVE VECTOR EYES
+        let ew = w;
+        let eh = h * (1 - this.blink * 0.88);
+
+        if (this.emotion === 'SCARED') {
+          ew *= 1.14;
+          eh *= 1.14;
+          cy += (Math.random() - 0.5) * 5;
+        } else if (this.emotion === 'CURIOUS') {
+          eh *= isLeft ? 1.12 : 0.78;
+        } else if (this.emotion === 'LISTEN') {
+          ew *= 1.06;
+          eh *= 1.06;
+        }
+
+        this.drawRoundedRect(ctx, cx - ew / 2, cy - eh / 2, ew, eh, 30);
+        ctx.fill();
+
+        // Crisp specular highlight inside eye
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
+        ctx.beginPath();
+        ctx.arc(
+          cx - ew * 0.2 + this.lookX * 6,
+          cy - eh * 0.22 + this.lookY * 6,
+          ew * 0.11,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+
+        // Angry Eyelid Mask (Pure Black #000000)
+        if (this.emotion === 'ANGRY') {
+          ctx.fillStyle = '#000000';
+          ctx.beginPath();
+          if (isLeft) {
+            ctx.moveTo(cx - ew * 0.65, cy - eh * 0.65);
+            ctx.lineTo(cx + ew * 0.65, cy - eh * 0.12);
+            ctx.lineTo(cx + ew * 0.65, cy - eh * 0.65);
+          } else {
+            ctx.moveTo(cx + ew * 0.65, cy - eh * 0.65);
+            ctx.lineTo(cx - ew * 0.65, cy - eh * 0.12);
+            ctx.lineTo(cx - ew * 0.65, cy - eh * 0.65);
+          }
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        ctx.restore();
+      }
+
+      renderParticles(ctx) {
+        ctx.save();
+        ctx.textAlign = 'center';
+        for (const p of this.particles) {
+          ctx.globalAlpha = Math.max(0, p.alpha);
+          ctx.font = `${Math.round(p.size)}px sans-serif`;
+          const icon = p.type === 'HEART' ? '鉂わ笍' : p.type === 'STAR' ? '馃挮' : '鉁�';
+          ctx.fillText(icon, p.x, p.y);
+        }
+        ctx.restore();
+      }
+    }
+
+    // ============================================================================
+    // 6. HYBRID BRAIN (OFFLINE ARABIC INTELLIGENCE + LIVE GEMINI API)
+    // ============================================================================
+    class EmoBrain {
+      constructor(emo) {
+        this.emo = emo;
+        this.geminiKey = localStorage.getItem('emo_gemini_key') || '';
+        this.history = [];
+        this.updateKeyBadge();
+      }
+
+      setGeminiKey(key) {
+        this.geminiKey = key.trim();
+        localStorage.setItem('emo_gemini_key', this.geminiKey);
+        this.updateKeyBadge();
+      }
+
+      updateKeyBadge() {
+        const tag = document.getElementById('aiStatusTag');
+        if (!tag) return;
+        if (this.geminiKey.startsWith('AIza')) {
+          tag.textContent = 'Gemini AI 賲鬲氐賱 鈿�';
+          tag.className = 'text-[10px] px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/40';
+        } else {
+          tag.textContent = '賵囟毓 兀賵賮賱丕賷賳 匕賰賷';
+          tag.className = 'text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400';
+        }
+      }
+
+      async respondTo(userText) {
+        this.emo.face.setEmotion('CURIOUS');
+
+        if (this.geminiKey.length > 12) {
+          try {
+            const reply = await this.askGemini(userText);
+            this.deliver(reply);
+            return;
+          } catch (err) {
+            console.warn('Gemini fallback:', err);
+          }
+        }
+
+        // Smart Offline Arabic Brain
+        setTimeout(() => {
+          const reply = this.askOffline(userText);
+          this.deliver(reply);
+        }, 320);
+      }
+
+      async askGemini(userText) {
+        const sys = `兀賳鬲 丕賱乇賵亘賵鬲 丕賱乇賮賷賯 廿賷賲賵 (EMO). 鬲鬲丨丿孬 亘丕賱賱睾丞 丕賱毓乇亘賷丞 亘賱賴噩丞 賱胤賷賮丞 賵賲禺鬲氐乇丞 噩丿丕賸 (噩賲賱丞 兀賵 噩賲賱鬲賷賳 賮賯胤).
+丕亘丿兀 乇丿賰 丿丕卅賲丕賸 亘兀丨丿 丕賱賵爻賵賲 丕賱鬲丕賱賷丞 賱鬲丨丿賷丿 鬲毓亘賷乇 毓賷賳賷賰 賵兀匕賳賷賰:
+[HAPPY] 兀賵 [LOVE] 兀賵 [CURIOUS] 兀賵 [SCARED] 兀賵 [DANCE] 兀賵 [ANGRY] 兀賵 [SLEEPY].`;
+
+        this.history.push({ role: 'user', parts: [{ text: userText }] });
+        if (this.history.length > 6) this.history = this.history.slice(-6);
+
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.geminiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: sys }] },
+              contents: this.history
+            })
+          }
+        );
+        if (!res.ok) throw new Error('Gemini error');
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[HAPPY] 兀賳丕 賲毓賰 丿丕卅賲丕賸 賷丕 氐丿賷賯賷!';
+        this.history.push({ role: 'model', parts: [{ text }] });
+        return text;
+      }
+
+      askOffline(text) {
+        const t = text.toLowerCase();
+        if (/賲乇丨亘丕|丕賴賱丕|丕賱爻賱丕賲|賴丕賷|氐亘丕丨|賲爻丕亍/.test(t)) {
+          return '[HAPPY] 兀賴賱丕賸 賷丕 氐丿賷賯賷! 爻毓賷丿 噩丿丕賸 亘乇丐賷鬲賰 賵爻賲丕毓 氐賵鬲賰!';
+        }
+        if (/賰賷賮賰|丕禺亘丕乇賰|卮賱賵賳賰|毓丕賲賱 丕賷賴/.test(t)) {
+          return '[HAPPY] 兀賳丕 亘兀賮囟賱 丨丕賱 賵胤丕賯鬲賷 賲賲鬲丕夭丞 亘賵噩賵丿賰 賲毓賷!';
+        }
+        if (/丕丨亘賰|亘丨亘賰|丨賱賵|噩賲賷賱|乇丕卅毓|匕賰賷/.test(t)) {
+          return '[LOVE] 賵兀賳丕 兀丨亘賰 賰孬賷乇丕賸 賷丕 氐丿賷賯賷 丕賱賲賮囟賱!';
+        }
+        if (/丕乇賯氐|乇賯氐|賲賵爻賷賯賶|睾賳賷/.test(t)) {
+          return '[DANCE] 賴賷丕 亘賳丕 賳乇賯氐 賵賳爻鬲賲鬲毓!';
+        }
+        if (/賳賰鬲丞|丕囟丨賰賳賷|囟丨賰賳賷/.test(t)) {
+          return '[HAPPY] 賲乇丞 亘胤丕乇賷丞 夭毓賱鬲 賲賳 丕賱卮丕丨賳貙 賯丕賱鬲賱賴 賱丕 鬲卮丨賳賳賷 毓丕胤賮賷丕賸! 賴丕賴丕賴丕!';
+        }
+        if (/丕賱爻丕毓丞|丕賱賵賯鬲/.test(t)) {
+          const now = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+          return `[CURIOUS] 丕賱爻丕毓丞 丕賱丌賳 賴賷 ${now}.`;
+        }
+        if (/賳丕賲|鬲氐亘丨 毓賱賶 禺賷乇|賳毓爻丕賳/.test(t)) {
+          return '[SLEEPY] 鬲氐亘丨 毓賱賶 禺賷乇 賷丕 氐丿賷賯賷.. 爻兀乇鬲丕丨 賯賱賷賱丕賸.';
+        }
+        return '[CURIOUS] 兀爻賲毓賰 亘賰賱 丕賴鬲賲丕賲 賷丕 氐丿賷賯賷! 兀禺亘乇賳賷 丕賱賲夭賷丿.';
+      }
+
+      deliver(raw) {
+        let emotion = 'HAPPY';
+        let speech = raw;
+        const match = raw.match(/^\[(HAPPY|LOVE|CURIOUS|SCARED|DANCE|ANGRY|SLEEPY)\]\s*/i);
+        if (match) {
+          emotion = match[1].toUpperCase();
+          speech = raw.replace(match[0], '');
+        }
+
+        const dur = emotion === 'SLEEPY' ? 0 : 4.2;
+        this.emo.face.setEmotion(emotion, dur);
+        this.emo.sound.playEmotion(emotion);
+        if (emotion === 'LOVE') this.emo.face.spawnParticles('HEART', 5);
+        this.emo.voice.speak(speech);
+      }
+    }
+
+    // ============================================================================
+    // 7. MAIN CONTROLLER & EXPLICIT PERMISSION WORKFLOW
+    // ============================================================================
+    class EmoCompanion {
+      constructor() {
+        this.sound = new EmoSound();
+        this.voice = new EmoVoice(this);
+        this.vision = new EmoVision(this);
+        this.sensors = new EmoSensors(this);
+        this.face = new EmoFaceCanvas(this);
+        this.brain = new EmoBrain(this);
+
+        this.setupPermissionsUI();
+        this.setupSecretDrawerUI();
+        this.startLoop();
+      }
+
+      setupPermissionsUI() {
+        const overlay = document.getElementById('permissionOverlay');
+        const btnCam = document.getElementById('btnPermCam');
+        const btnMic = document.getElementById('btnPermMic');
+        const btnMotion = document.getElementById('btnPermMotion');
+        const btnStart = document.getElementById('btnStartEmo');
+
+        const markGranted = (btn, ok) => {
+          if (ok) {
+            btn.textContent = '鬲賲 丕賱鬲賮毓賷賱 鉁�';
+            btn.className = 'px-3.5 py-2 rounded-xl bg-emerald-500 text-black font-bold text-xs';
+          } else {
+            btn.textContent = '賲乇賮賵囟 鉁�';
+            btn.className = 'px-3.5 py-2 rounded-xl bg-rose-500 text-white font-bold text-xs';
+          }
+        };
+
+        btnCam.addEventListener('click', async () => {
+          const ok = await this.vision.requestPermission();
+          markGranted(btnCam, ok);
+        });
+
+        btnMic.addEventListener('click', async () => {
+          const ok = await this.voice.requestPermission();
+          markGranted(btnMic, ok);
+        });
+
+        btnMotion.addEventListener('click', async () => {
+          const ok = await this.sensors.requestPermission();
+          markGranted(btnMotion, ok);
+        });
+
+        btnStart.addEventListener('click', () => {
+          this.sound.unlock();
+          overlay.classList.add('hidden');
+          this.face.setEmotion('HAPPY', 2.8);
+          this.sound.playEmotion('HAPPY');
+          this.voice.speak('兀賴賱丕賸 亘賰! 兀賳丕 廿賷賲賵貙 爻毓賷丿 噩丿丕賸 亘賵噩賵丿賷 賲毓賰!');
+        });
+      }
+
+      setupSecretDrawerUI() {
+        const drawer = document.getElementById('secretDrawer');
+        const keyInput = document.getElementById('geminiKeyInput');
+        keyInput.value = this.brain.geminiKey;
+
+        document.getElementById('btnCloseDrawer').addEventListener('click', () => {
+          drawer.classList.remove('open');
+        });
+
+        document.getElementById('btnSaveKey').addEventListener('click', () => {
+          this.brain.setGeminiKey(keyInput.value);
+          this.sound.playEmotion('HAPPY');
+          drawer.classList.remove('open');
+        });
+
+        document.querySelectorAll('.neon-swatch').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.neon-swatch').forEach(b => b.classList.replace('border-white', 'border-transparent'));
+            btn.classList.replace('border-transparent', 'border-white');
+            this.face.setColor(btn.dataset.color);
+            this.sound.playEmotion('HAPPY');
+          });
+        });
+
+        document.getElementById('btnReopenPerms').addEventListener('click', () => {
+          drawer.classList.remove('open');
+          document.getElementById('permissionOverlay').classList.remove('hidden');
+        });
+
+        const btnAutoListen = document.getElementById('btnToggleAutoListen');
+        btnAutoListen.addEventListener('click', () => {
+          this.voice.continuousMode = !this.voice.continuousMode;
+          btnAutoListen.textContent = `馃帣锔� 丕爻鬲賲丕毓 賲爻鬲賲乇: ${this.voice.continuousMode ? '賲賮毓賾賱' : '廿賷賯丕賮'}`;
+          if (this.voice.continuousMode) {
+            this.voice.startListening();
+          } else {
+            this.voice.stopListening();
+          }
+        });
+      }
+
+      startLoop() {
+        let last = performance.now();
+        const tick = (now) => {
+          const dt = Math.min(0.05, (now - last) / 1000);
+          last = now;
+          this.face.update(dt);
+          this.face.render();
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }
+    }
+
+    window.addEventListener('load', () => {
+      window.emoApp = new EmoCompanion();
+    });
+  </script>
+</body>
+</html>
