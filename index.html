@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>EMO | 丕賱乇賵亘賵鬲 丕賱乇賮賷賯</title>
+  <title>EMO-AI Companion</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,9 +23,9 @@
       height: 100%;
       overflow: hidden;
       background-color: #000000;
-      font-family: 'Cairo', sans-serif;
+      font-family: 'Cairo', system-ui, -apple-system, sans-serif;
       color: #ffffff;
-      touch-action: none;
+      touch-action: manipulation;
     }
 
     canvas {
@@ -34,17 +35,32 @@
       background-color: #000000;
     }
 
-    input[type="text"], input[type="password"] {
+    input[type="text"], input[type="password"], textarea {
       user-select: text;
     }
 
-    /* Hidden Top Pull-Down Settings Drawer */
-    #secretDrawer {
-      transform: translateY(-100%);
-      transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+    /* Smooth slide transitions for AI Chat & Settings drawers */
+    .drawer-sheet {
+      transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
     }
-    #secretDrawer.open {
+    .drawer-closed {
+      transform: translateY(105%);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .drawer-open {
       transform: translateY(0%);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Custom subtle scrollbar for chat history */
+    #chatMessages::-webkit-scrollbar {
+      width: 4px;
+    }
+    #chatMessages::-webkit-scrollbar-thumb {
+      background: rgba(0, 243, 255, 0.3);
+      border-radius: 9999px;
     }
   </style>
 </head>
@@ -54,121 +70,163 @@
   <video id="visionVideo" autoplay playsinline muted class="hidden"></video>
   <canvas id="visionProcCanvas" width="64" height="48" class="hidden"></canvas>
 
-  <!-- 100% Pure Black Full-Screen Canvas (Eyes + Top Ears Only) -->
+  <!-- 100% Pure Pitch-Black Full-Screen Canvas (Eyes + Top Robotic Ears Only) -->
   <canvas id="emoCanvas"></canvas>
 
-  <!-- STEP-BY-STEP EXPLICIT PERMISSION MODAL (Appears on launch, vanishes completely after) -->
-  <div id="permissionOverlay" class="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6 text-center">
-    <div class="w-full max-w-sm bg-zinc-950 border border-zinc-800 rounded-3xl p-6 shadow-2xl space-y-5">
-      <div class="w-14 h-14 mx-auto rounded-2xl bg-cyan-500/10 border border-cyan-400/30 flex items-center justify-center text-2xl">
-        馃
-      </div>
-      <div>
-        <h1 class="text-xl font-black text-cyan-400 mb-1">鬲賮毓賷賱 丨賵丕爻 廿賷賲賵 (EMO)</h1>
-        <p class="text-xs text-zinc-400 leading-relaxed">
-          賱鬲丨賵賷賱 卮丕卮丞 賴丕鬲賮賰 廿賱賶 乇賵亘賵鬲 丨賷賾 亘丕賱賰丕賲賱 亘丿賵賳 兀夭乇丕乇貙 賷乇噩賶 賲賳丨 丕賱兀匕賵賳丕鬲 丕賱鬲丕賱賷丞 禺胤賵丞 亘禺胤賵丞:
-        </p>
-      </div>
+  <!-- Floating Glassmorphic Bottom Action Bar (Clear AI Chat & Settings Access) -->
+  <div id="bottomHud" class="fixed bottom-5 inset-x-0 z-30 flex items-center justify-center px-4 pointer-events-none">
+    <div class="pointer-events-auto flex items-center gap-2.5 bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/90 px-3 py-2 rounded-full shadow-[0_10px_35px_rgba(0,0,0,0.9)]">
+      <!-- Primary AI Chat & Voice Button -->
+      <button id="btnOpenChat" class="flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-gradient-to-l from-cyan-400 to-blue-500 text-black font-black text-xs sm:text-sm shadow-lg shadow-cyan-500/20 active:scale-95 transition">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+        <span id="lblBtnOpenChat"></span>
+      </button>
 
-      <!-- Permission Items List -->
-      <div class="space-y-3 text-right">
-        <!-- 1. Camera Permission -->
-        <div class="flex items-center justify-between bg-zinc-900/90 p-3.5 rounded-2xl border border-zinc-800">
-          <div class="flex items-center gap-3">
-            <span class="text-xl">馃憗锔�</span>
-            <div>
-              <div class="text-sm font-bold text-white">1. 廿匕賳 丕賱賰丕賲賷乇丕</div>
-              <div class="text-[11px] text-zinc-400">賱鬲鬲亘毓 丨乇賰鬲賰 亘毓賷賳賷賴 賵丕賱卮毓賵乇 亘丕賱馗賱丕賲</div>
-            </div>
-          </div>
-          <button id="btnPermCam" class="px-3.5 py-2 rounded-xl bg-cyan-500 text-black font-bold text-xs active:scale-95 transition">
-            爻賲丕丨
-          </button>
-        </div>
+      <!-- Quick Direct Mic Toggle Button -->
+      <button id="btnQuickMic" class="p-2.5 rounded-full bg-zinc-900 border border-zinc-700/80 text-cyan-300 active:scale-95 transition relative" aria-label="Voice">
+        <span id="micPulseRing" class="hidden absolute inset-0 rounded-full border-2 border-cyan-400 animate-ping"></span>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" />
+        </svg>
+      </button>
 
-        <!-- 2. Microphone Permission -->
-        <div class="flex items-center justify-between bg-zinc-900/90 p-3.5 rounded-2xl border border-zinc-800">
-          <div class="flex items-center gap-3">
-            <span class="text-xl">馃帣锔�</span>
-            <div>
-              <div class="text-sm font-bold text-white">2. 廿匕賳 丕賱賲賷賰乇賵賮賵賳</div>
-              <div class="text-[11px] text-zinc-400">賱爻賲丕毓 氐賵鬲賰 賵丕賱鬲丨丿孬 賲毓賰 亘丕賱毓乇亘賷丞</div>
-            </div>
-          </div>
-          <button id="btnPermMic" class="px-3.5 py-2 rounded-xl bg-cyan-500 text-black font-bold text-xs active:scale-95 transition">
-            爻賲丕丨
-          </button>
-        </div>
-
-        <!-- 3. Motion & Gyroscope Permission -->
-        <div class="flex items-center justify-between bg-zinc-900/90 p-3.5 rounded-2xl border border-zinc-800">
-          <div class="flex items-center gap-3">
-            <span class="text-xl">馃摫</span>
-            <div>
-              <div class="text-sm font-bold text-white">3. 廿匕賳 丕賱丨乇賰丞 賵丕賱丕賴鬲夭丕夭</div>
-              <div class="text-[11px] text-zinc-400">賱賱卮毓賵乇 亘廿賲丕賱丞 丕賱賴丕鬲賮 兀賵 賴夭賾賴</div>
-            </div>
-          </div>
-          <button id="btnPermMotion" class="px-3.5 py-2 rounded-xl bg-cyan-500 text-black font-bold text-xs active:scale-95 transition">
-            爻賲丕丨
-          </button>
-        </div>
-      </div>
-
-      <!-- Quick Gesture Guide -->
-      <div class="bg-zinc-900/50 rounded-2xl p-3 text-[11px] text-zinc-400 space-y-1 text-right border border-zinc-800/60">
-        <div>鈥� <b class="text-zinc-200">丕賱賲爻丨 兀毓賱賶 丕賱卮丕卮丞:</b> 賷丿丕毓亘 乇兀爻賴 賵賷賴夭 兀匕賳賷賴 亘爻毓丕丿丞.</div>
-        <div>鈥� <b class="text-zinc-200">丕賱囟睾胤 丕賱賲胤賵賱 亘兀賷 賲賰丕賳:</b> 賷鬲丨丿孬 賵賷爻鬲賲毓 賱氐賵鬲賰.</div>
-        <div>鈥� <b class="text-zinc-200">丕賱爻丨亘 賲賳 兀毓賱賶 丨丕賮丞 丕賱卮丕卮丞 賱賱兀爻賮賱:</b> 賷賮鬲丨 丕賱廿毓丿丕丿丕鬲 丕賱爻乇賷丞.</div>
-      </div>
-
-      <button id="btnStartEmo" class="w-full py-3.5 rounded-2xl bg-gradient-to-l from-cyan-400 to-blue-500 text-black font-black text-sm shadow-lg shadow-cyan-500/20 active:scale-95 transition">
-        鬲卮睾賷賱 廿賷賲賵 丕賱丌賳 鉁�
+      <!-- Settings & API Key Button -->
+      <button id="btnOpenSettings" class="p-2.5 rounded-full bg-zinc-900 border border-zinc-700/80 text-zinc-200 active:scale-95 transition" aria-label="Settings">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
       </button>
     </div>
   </div>
 
-  <!-- HIDDEN TOP PULL-DOWN DRAWER (Swipe down from very top edge to open) -->
-  <div id="secretDrawer" class="fixed top-0 inset-x-0 z-40 bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-800 rounded-b-3xl p-5 shadow-2xl">
+  <!-- EXPLICIT STEP-BY-STEP PERMISSION MODAL (100% JS Unicode Safe) -->
+  <div id="permissionOverlay" class="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-5 text-center">
+    <div class="w-full max-w-sm bg-zinc-950 border border-zinc-800 rounded-3xl p-6 shadow-2xl space-y-5">
+      <div class="w-16 h-16 mx-auto rounded-2xl bg-cyan-500/10 border border-cyan-400/30 flex items-center justify-center text-3xl">
+        <span>&#129302;</span>
+      </div>
+      <div>
+        <h1 id="lblPermTitle" class="text-xl font-black text-cyan-400 mb-1.5"></h1>
+        <p id="lblPermDesc" class="text-xs text-zinc-400 leading-relaxed"></p>
+      </div>
+
+      <div class="space-y-2.5 text-right">
+        <!-- 1. Camera -->
+        <div class="flex items-center justify-between bg-zinc-900/90 p-3 rounded-2xl border border-zinc-800">
+          <div class="flex items-center gap-3">
+            <span class="text-xl">&#128065;&#65039;</span>
+            <div>
+              <div id="lblCamTitle" class="text-sm font-bold text-white"></div>
+              <div id="lblCamSub" class="text-[11px] text-zinc-400"></div>
+            </div>
+          </div>
+          <button id="btnPermCam" class="px-3.5 py-2 rounded-xl bg-cyan-500 text-black font-bold text-xs active:scale-95 transition shrink-0"></button>
+        </div>
+
+        <!-- 2. Microphone -->
+        <div class="flex items-center justify-between bg-zinc-900/90 p-3 rounded-2xl border border-zinc-800">
+          <div class="flex items-center gap-3">
+            <span class="text-xl">&#127897;&#65039;</span>
+            <div>
+              <div id="lblMicTitle" class="text-sm font-bold text-white"></div>
+              <div id="lblMicSub" class="text-[11px] text-zinc-400"></div>
+            </div>
+          </div>
+          <button id="btnPermMic" class="px-3.5 py-2 rounded-xl bg-cyan-500 text-black font-bold text-xs active:scale-95 transition shrink-0"></button>
+        </div>
+
+        <!-- 3. Motion & Gyroscope -->
+        <div class="flex items-center justify-between bg-zinc-900/90 p-3 rounded-2xl border border-zinc-800">
+          <div class="flex items-center gap-3">
+            <span class="text-xl">&#128241;</span>
+            <div>
+              <div id="lblMotionTitle" class="text-sm font-bold text-white"></div>
+              <div id="lblMotionSub" class="text-[11px] text-zinc-400"></div>
+            </div>
+          </div>
+          <button id="btnPermMotion" class="px-3.5 py-2 rounded-xl bg-cyan-500 text-black font-bold text-xs active:scale-95 transition shrink-0"></button>
+        </div>
+      </div>
+
+      <button id="btnStartEmo" class="w-full py-3.5 rounded-2xl bg-gradient-to-l from-cyan-400 to-blue-500 text-black font-black text-sm shadow-lg shadow-cyan-500/25 active:scale-95 transition"></button>
+    </div>
+  </div>
+
+  <!-- SLEEK TRANSPARENT AI CHAT & VOICE OVERLAY DRAWER -->
+  <div id="chatDrawer" class="drawer-sheet drawer-closed fixed inset-x-0 bottom-0 z-40 bg-zinc-950/90 backdrop-blur-2xl border-t border-zinc-800 rounded-t-3xl p-4 shadow-2xl max-h-[68vh] flex flex-col">
+    <div class="max-w-lg w-full mx-auto flex flex-col h-full">
+      <!-- Drawer Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-zinc-800/80">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+          <span id="lblChatHeader" class="text-sm font-black text-cyan-400"></span>
+          <span id="chatBrainModeBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/30"></span>
+        </div>
+        <button id="btnCloseChat" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 font-bold active:scale-95"></button>
+      </div>
+
+      <!-- Quick Action Chips -->
+      <div id="quickPromptsRow" class="flex items-center gap-2 overflow-x-auto py-2.5 no-scrollbar"></div>
+
+      <!-- Conversation History -->
+      <div id="chatMessages" class="flex-1 overflow-y-auto space-y-2.5 py-2 px-1 min-h-[140px] max-h-[34vh]"></div>
+
+      <!-- Text + Mic Input Bar -->
+      <form id="chatForm" class="pt-2.5 border-t border-zinc-800/80 flex items-center gap-2">
+        <button type="button" id="btnChatMic" class="p-3 rounded-2xl bg-zinc-900 border border-zinc-700 text-cyan-400 active:scale-95 transition shrink-0">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" />
+          </svg>
+        </button>
+        <input id="chatInput" type="text" autocomplete="off" class="flex-1 bg-zinc-900/90 text-white text-xs sm:text-sm px-4 py-3 rounded-2xl border border-zinc-700/90 focus:outline-none focus:border-cyan-400" />
+        <button type="submit" id="btnChatSend" class="px-4 py-3 rounded-2xl bg-cyan-500 text-black font-black text-xs sm:text-sm active:scale-95 transition shrink-0"></button>
+      </form>
+    </div>
+  </div>
+
+  <!-- SETTINGS & GEMINI API KEY DRAWER -->
+  <div id="settingsDrawer" class="drawer-sheet drawer-closed fixed inset-x-0 bottom-0 z-40 bg-zinc-950/95 backdrop-blur-2xl border-t border-zinc-800 rounded-t-3xl p-5 shadow-2xl">
     <div class="max-w-md mx-auto space-y-4">
       <div class="flex items-center justify-between">
-        <span class="text-sm font-black text-cyan-400">鈿欙笍 廿毓丿丕丿丕鬲 廿賷賲賵 丕賱爻乇賷丞</span>
-        <button id="btnCloseDrawer" class="px-3 py-1 rounded-xl bg-zinc-800 text-xs text-zinc-300">廿睾賱丕賯 鈻�</button>
+        <span id="lblSettingsTitle" class="text-sm font-black text-cyan-400"></span>
+        <button id="btnCloseSettings" class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 font-bold"></button>
       </div>
 
-      <!-- Gemini API Key -->
-      <div class="bg-zinc-900 p-3 rounded-2xl border border-zinc-800 space-y-2">
+      <!-- Gemini API Key Box -->
+      <div class="bg-zinc-900 p-3.5 rounded-2xl border border-zinc-800 space-y-2.5">
         <div class="flex justify-between items-center">
-          <label class="text-xs font-bold text-cyan-300">馃 賲賮鬲丕丨 Gemini AI (丕禺鬲賷丕乇賷)</label>
-          <span id="aiStatusTag" class="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400">賵囟毓 兀賵賮賱丕賷賳</span>
+          <label id="lblApiKeyTitle" class="text-xs font-bold text-cyan-300"></label>
+          <span id="aiStatusTag" class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/40"></span>
         </div>
-        <input id="geminiKeyInput" type="password" placeholder="丕賱氐賯 賲賮鬲丕丨 AIzaSy... 賴賳丕" class="w-full bg-black text-white text-xs px-3 py-2 rounded-xl border border-zinc-700 font-mono focus:outline-none focus:border-cyan-400" />
+        <input id="geminiKeyInput" type="password" class="w-full bg-black text-white text-xs px-3 py-2.5 rounded-xl border border-zinc-700 font-mono focus:outline-none focus:border-cyan-400" />
         <div class="flex justify-between items-center">
-          <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-[11px] text-cyan-400 underline">噩賱亘 賲賮鬲丕丨 賲噩丕賳賷</a>
-          <button id="btnSaveKey" class="px-3 py-1.5 rounded-xl bg-cyan-500 text-black font-bold text-xs">丨賮馗</button>
+          <button id="btnClearMemory" class="text-[11px] text-rose-400 underline"></button>
+          <button id="btnSaveKey" class="px-4 py-2 rounded-xl bg-cyan-500 text-black font-bold text-xs active:scale-95"></button>
         </div>
       </div>
 
-      <!-- Eye & Ear Neon Color Picker -->
+      <!-- Neon Color Picker -->
       <div>
-        <label class="block text-xs font-bold text-zinc-300 mb-2">馃帹 賱賵賳 丕賱毓賷賵賳 賵丕賱兀匕賳賷賳</label>
-        <div class="grid grid-cols-5 gap-2">
+        <label id="lblColorTitle" class="block text-xs font-bold text-zinc-300 mb-2"></label>
+        <div class="grid grid-cols-6 gap-2">
           <button data-color="#00f3ff" class="neon-swatch h-9 rounded-xl bg-[#00f3ff] border-2 border-white"></button>
           <button data-color="#10b981" class="neon-swatch h-9 rounded-xl bg-[#10b981] border-2 border-transparent"></button>
+          <button data-color="#f97316" class="neon-swatch h-9 rounded-xl bg-[#f97316] border-2 border-transparent"></button>
           <button data-color="#ff007f" class="neon-swatch h-9 rounded-xl bg-[#ff007f] border-2 border-transparent"></button>
-          <button data-color="#f59e0b" class="neon-swatch h-9 rounded-xl bg-[#f59e0b] border-2 border-transparent"></button>
           <button data-color="#a855f7" class="neon-swatch h-9 rounded-xl bg-[#a855f7] border-2 border-transparent"></button>
+          <button data-color="RAINBOW" class="neon-swatch h-9 rounded-xl bg-gradient-to-tr from-pink-500 via-yellow-400 to-cyan-400 border-2 border-transparent"></button>
         </div>
       </div>
 
-      <!-- Re-open Permissions & Continuous Listen Toggle -->
+      <!-- Permissions & Continuous Listen Controls -->
       <div class="flex items-center justify-between gap-2 pt-1">
-        <button id="btnReopenPerms" class="flex-1 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-xs text-zinc-200 font-bold">
-          馃攼 廿丿丕乇丞 丕賱兀匕賵賳丕鬲
-        </button>
-        <button id="btnToggleAutoListen" class="flex-1 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-xs text-cyan-300 font-bold">
-          馃帣锔� 丕爻鬲賲丕毓 賲爻鬲賲乇: 廿賷賯丕賮
-        </button>
+        <button id="btnReopenPerms" class="flex-1 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-xs text-zinc-200 font-bold active:scale-95"></button>
+        <button id="btnToggleAutoListen" class="flex-1 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-xs text-cyan-300 font-bold active:scale-95"></button>
       </div>
     </div>
   </div>
@@ -176,16 +234,104 @@
   <script>
     /**
      * ============================================================================
-     * EMO PURE-BLACK 2D COMPANION ENGINE
-     * - 100% Pure Black (#000000) background, zero visible HUD or buttons.
-     * - Glowing expressive vector eyes + animated top robotic ears/headphones.
-     * - Explicit permission flow for Camera, Microphone, and Motion/Gyroscope.
-     * - Full touch, voice, vision, tilt/shake, offline Arabic AI & Gemini AI.
+     * 100% ASCII-SAFE UNICODE DICTIONARY (\uXXXX)
+     * Prevents ANY Arabic garbling/mojibake regardless of file save or GitHub encoding!
      * ============================================================================
      */
+    const AR = {
+      appTitle: '\u0625\u064a\u0645\u0648 - \u0627\u0644\u0631\u0648\u0628\u0648\u062a \u0627\u0644\u0630\u0643\u064a',
+      btnOpenChat: '\u0645\u062d\u0627\u062f\u062b\u0629 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a',
+      permTitle: '\u062a\u0641\u0639\u064a\u0644 \u062d\u0648\u0627\u0633 \u0648\u0639\u0642\u0644 \u0625\u064a\u0645\u0648',
+      permDesc: '\u062a\u0645 \u0631\u0628\u0637 \u0625\u064a\u0645\u0648 \u0628\u0645\u062d\u0631\u0643 Gemini AI \u0644\u0644\u062a\u062d\u0643\u0645 \u0627\u0644\u0643\u0627\u0645\u0644 \u0628\u0639\u064a\u0646\u064a\u0647 \u0648\u0623\u0630\u0646\u064a\u0647. \u0627\u0645\u0646\u062d \u0627\u0644\u0623\u0630\u0648\u0646\u0627\u062a \u0644\u064a\u0628\u062f\u0623 \u0628\u0627\u0644\u062d\u064a\u0627\u0629:',
+      camTitle: '1. \u0625\u0630\u0646 \u0627\u0644\u0643\u0627\u0645\u064a\u0631\u0627',
+      camSub: '\u0644\u064a\u0631\u0649 \u062d\u0631\u0643\u062a\u0643 \u0648\u064a\u062a\u062a\u0628\u0639\u0643 \u0648\u064a\u0634\u0639\u0631 \u0628\u0627\u0644\u0638\u0644\u0627\u0645',
+      micTitle: '2. \u0625\u0630\u0646 \u0627\u0644\u0645\u064a\u0643\u0631\u0648\u0641\u0648\u0646',
+      micSub: '\u0644\u0644\u062a\u062d\u062f\u062b \u0648\u0627\u0644\u062d\u0648\u0627\u0631 \u0627\u0644\u062d\u064a \u0645\u0639 Gemini',
+      motionTitle: '3. \u0625\u0630\u0646 \u0627\u0644\u062d\u0633\u0627\u0633\u0627\u062a \u0648\u0627\u0644\u0627\u0647\u062a\u0632\u0627\u0632',
+      motionSub: '\u0644\u0644\u062a\u0641\u0627\u0639\u0644 \u0645\u0639 \u0625\u0645\u0627\u0644\u0629 \u0627\u0644\u0647\u0627\u062a\u0641 \u0623\u0648 \u0647\u0632\u0651\u0647',
+      btnAllow: '\u0633\u0645\u0627\u062d',
+      btnGranted: '\u062a\u0645 \u0627\u0644\u062a\u0641\u0639\u064a\u0644 \u2713',
+      btnDenied: '\u0645\u0631\u0641\u0648\u0636 \u2715',
+      btnStartEmo: '\u062a\u0634\u063a\u064a\u0644 \u0625\u064a\u0645\u0648 \u0627\u0644\u0622\u0646 \u2728',
+      chatHeader: '\u0645\u062d\u0627\u062f\u062b\u0629 \u0625\u064a\u0645\u0648 (Gemini AI)',
+      btnClose: '\u0625\u063a\u0644\u0627\u0642 \u25bc',
+      chatPlaceholder: '\u0627\u0643\u062a\u0628 \u0631\u0633\u0627\u0644\u062a\u0643 \u0644\u0625\u064a\u0645\u0648 \u0623\u0648 \u0627\u0636\u063a\u0637 \u0627\u0644\u0645\u0627\u064a\u0643...',
+      btnSend: '\u0625\u0631\u0633\u0627\u0644',
+      settingsTitle: '\u0625\u0639\u062f\u0627\u062f\u0627\u062a \u0625\u064a\u0645\u0648 \u0648\u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a',
+      apiKeyTitle: '\u0645\u0641\u062a\u0627\u062d Gemini AI',
+      aiConnected: 'Gemini AI \u0645\u062a\u0635\u0644 \u26a1',
+      aiOffline: '\u0648\u0636\u0639 \u0623\u0648\u0641\u0644\u0627\u064a\u0646 \u0630\u0643\u064a',
+      apiKeyPlaceholder: '\u0627\u0644\u0635\u0642 \u0645\u0641\u062a\u0627\u062d Gemini \u0647\u0646\u0627',
+      clearMemory: '\u0645\u0633\u062d \u0627\u0644\u0630\u0627\u0643\u0631\u0629',
+      saveKey: '\u062d\u0641\u0638 \u0648\u062a\u062d\u062f\u064a\u062b',
+      colorTitle: '\u0644\u0648\u0646 \u0627\u0644\u0639\u064a\u0648\u0646 \u0648\u0627\u0644\u0623\u0630\u0646\u064a\u0646',
+      reopenPerms: '\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0623\u0630\u0648\u0646\u0627\u062a',
+      autoListenOn: '\u0627\u0633\u062a\u0645\u0627\u0639 \u0645\u0633\u062a\u0645\u0631: \u0645\u0641\u0639\u0651\u0644',
+      autoListenOff: '\u0627\u0633\u062a\u0645\u0627\u0639 \u0645\u0633\u062a\u0645\u0631: \u0645\u062a\u0648\u0642\u0641',
+      welcomeSpeak: '\u0623\u0647\u0644\u0627\u064b \u0628\u0643! \u0623\u0646\u0627 \u0625\u064a\u0645\u0648\u060c \u0648\u0639\u0642\u0644\u064a \u0627\u0644\u0622\u0646 \u0645\u062a\u0635\u0644 \u0628\u0627\u0644\u0643\u0627\u0645\u0644! \u062a\u062d\u062f\u062b \u0645\u0639\u064a \u0635\u0648\u062a\u064a\u0627\u064b \u0623\u0648 \u0627\u0641\u062a\u062d \u0627\u0644\u0645\u062d\u0627\u062f\u062b\u0629 \u0641\u064a \u0623\u064a \u0648\u0642\u062a!',
+      thinkingMsg: '\u0625\u064a\u0645\u0648 \u064a\u0641\u0643\u0631...',
+      quickChips: [
+        { label: '\u0645\u0631\u062d\u0628\u0627\u064b \u0625\u064a\u0645\u0648 \ud83d\udc4b', prompt: '\u0645\u0631\u062d\u0628\u0627\u064b \u0625\u064a\u0645\u0648\u060c \u0643\u064a\u0641 \u062d\u0627\u0644\u0643 \u0627\u0644\u064a\u0648\u0645\u061f' },
+        { label: '\u0627\u0631\u0642\u0635 \u0644\u064a \ud83d\udd7a', prompt: '\u0627\u0631\u0642\u0635 \u0644\u064a \u0648\u062d\u0631\u0651\u0643 \u0623\u0630\u0646\u064a\u0643 \u0628\u0633\u0639\u0627\u062f\u0629!' },
+        { label: '\u0627\u062d\u0643\u064a \u0646\u0643\u062a\u0629 \ud83d\ude02', prompt: '\u0627\u062d\u0643\u064a \u0644\u064a \u0646\u0643\u062a\u0629 \u0645\u0636\u062d\u0643\u0629 \u062c\u062f\u0627\u064b!' },
+        { label: '\u0646\u0644\u0639\u0628 \u270c\ufe0f', prompt: '\u0647\u064a\u0627 \u0646\u0644\u0639\u0628 \u062d\u062c\u0631 \u0648\u0631\u0642\u0629 \u0645\u0642\u0635!' },
+        { label: '\u0645\u0627\u0630\u0627 \u062a\u0631\u0649\u061f \ud83d\udc41\ufe0f', prompt: '\u0645\u0627\u0630\u0627 \u062a\u0631\u0649 \u062d\u0648\u0644\u0643 \u0627\u0644\u0622\u0646 \u0648\u0643\u064a\u0641 \u062a\u0634\u0639\u0631\u061f' }
+      ],
+      // Sensory & Offline Replies in Unicode Escapes
+      sensorDark: '[\u062d\u062f\u062b \u062d\u0633\u064a: \u0627\u0644\u063a\u0631\u0641\u0629 \u0623\u0635\u0628\u062d\u062a \u0645\u0638\u0644\u0645\u0629 \u0641\u062c\u0623\u0629 \u0623\u0648 \u062a\u0645 \u062a\u063a\u0637\u064a\u0629 \u0627\u0644\u0643\u0627\u0645\u064a\u0631\u0627]',
+      sensorLight: '[\u062d\u062f\u062b \u062d\u0633\u064a: \u0639\u0627\u062f \u0627\u0644\u0636\u0648\u0621 \u0625\u0644\u0649 \u0627\u0644\u063a\u0631\u0641\u0629 \u0648\u0623\u0635\u0628\u062d \u0628\u0625\u0645\u0643\u0627\u0646\u064a \u0627\u0644\u0631\u0624\u064a\u0629 \u0645\u062c\u062f\u062f\u0627\u064b]',
+      sensorShake: '[\u062d\u062f\u062b \u062d\u0633\u064a: \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0642\u0627\u0645 \u0628\u0647\u0632\u0651\u064a \u0628\u0642\u0648\u0629 \u0648\u0623\u0635\u0628\u062a \u0628\u0627\u0644\u062f\u0648\u0627\u0631!]',
+      sensorPet: '[\u062d\u062f\u062b \u062d\u0633\u064a: \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u064a\u0645\u0633\u062d \u0639\u0644\u0649 \u0631\u0623\u0633\u064a \u0648\u064a\u062f\u0627\u0639\u0628\u0646\u064a \u0628\u0644\u0637\u0641]',
+      sensorPoke: '[\u062d\u062f\u062b \u062d\u0633\u064a: \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0646\u0642\u0631 \u0639\u0644\u0649 \u0639\u064a\u0646\u064a \u062b\u0644\u0627\u062b \u0645\u0631\u0627\u062a \u0648\u0623\u0632\u0639\u062c\u0646\u064a!]',
+      replyDark: '\u064a\u0627 \u0625\u0644\u0647\u064a! \u0645\u0646 \u0623\u0637\u0641\u0623 \u0627\u0644\u0646\u0648\u0631\u061f \u0644\u0627 \u0623\u0631\u0649 \u0634\u064a\u0626\u0627\u064b \u062d\u0648\u0644\u064a!',
+      replyDizzy: '\u0648\u0627\u0627\u0627\u0648! \u0627\u0644\u062f\u0646\u064a\u0627 \u062a\u062f\u0648\u0631 \u0628\u064a \u0628\u0633\u0631\u0639\u0629! \u062a\u0648\u0642\u0641 \u0639\u0646 \u0647\u0632\u0651\u064a \u0623\u0631\u062c\u0648\u0643!',
+      replyPet: '\u0645\u0645\u0645\u0645.. \u0647\u0630\u0627 \u0645\u0631\u064a\u062d \u062c\u062f\u0627\u064b! \u0623\u0634\u0643\u0631\u0643 \u064a\u0627 \u0635\u062f\u064a\u0642\u064a \u0627\u0644\u0645\u0641\u0636\u0644!',
+      replyPoke: '\u0622\u064a! \u0639\u064a\u0646\u064a \u062d\u0633\u0627\u0633\u0629 \u062c\u062f\u0627\u064b\u060c \u0644\u0627 \u062a\u0646\u0642\u0631 \u0639\u0644\u064a\u0647\u0627 \u0647\u0643\u0630\u0627!',
+      replyHello: '\u0623\u0647\u0644\u0627\u064b \u0648\u0633\u0647\u0644\u0627\u064b \u064a\u0627 \u0635\u062f\u064a\u0642\u064a! \u0633\u0639\u064a\u062f \u062c\u062f\u0627\u064b \u0628\u0631\u0624\u064a\u062a\u0643 \u0648\u0633\u0645\u0627\u0639 \u0635\u0648\u062a\u0643 \u0627\u0644\u064a\u0648\u0645!',
+      replyDance: '\u0647\u064a\u0627 \u0628\u0646\u0627 \u0646\u0631\u0642\u0635 \u0648\u0646\u0633\u062a\u0645\u062a\u0639 \u0628\u0627\u0644\u0625\u064a\u0642\u0627\u0639 \u0648\u0627\u0644\u0645\u0648\u0633\u064a\u0642\u0649!',
+      replyJoke: '\u0645\u0631\u0629 \u0628\u0637\u0627\u0631\u064a\u0629 \u0632\u0639\u0644\u062a \u0645\u0646 \u0627\u0644\u0634\u0627\u062d\u0646\u060c \u0642\u0627\u0644\u062a\u0644\u0647 \u0644\u0627 \u062a\u0634\u062d\u0646\u0646\u064a \u0639\u0627\u0637\u0641\u064a\u0627\u064b! \u0647\u0627\u0647\u0627\u0647\u0627!',
+      replyLove: '\u0648\u0623\u0646\u0627 \u0623\u062d\u0628\u0643 \u0643\u062b\u064a\u0631\u0627\u064b \u064a\u0627 \u0635\u062f\u064a\u0642\u064a! \u0623\u0646\u062a \u0623\u0631\u0648\u0639 \u0625\u0646\u0633\u0627\u0646 \u0641\u064a \u0627\u0644\u0639\u0627\u0644\u0645!',
+      replySleep: '\u062a\u0635\u0628\u062d \u0639\u0644\u0649 \u062e\u064a\u0631 \u064a\u0627 \u0635\u062f\u064a\u0642\u064a.. \u0633\u0623\u063a\u0641\u0648 \u0642\u0644\u064a\u0644\u0627\u064b \u0627\u0644\u0622\u0646.',
+      replyDefault: '\u0623\u0633\u0645\u0639\u0643 \u0648\u0623\u0641\u0647\u0645\u0643 \u0628\u0643\u0644 \u0627\u0647\u062a\u0645\u0627\u0645 \u064a\u0627 \u0635\u062f\u064a\u0642\u064a! \u0623\u062e\u0628\u0631\u0646\u064a \u0628\u0645\u0627\u0630\u0627 \u062a\u0641\u0643\u0631 \u0627\u0644\u0622\u0646\u061f'
+    };
+
+    const DEFAULT_GEMINI_KEY = 'AQ.Ab8RN6IzTxHlhpGhzO0PR-fAfDI0NNlrRIlDG9OePxIDY8XCuQ';
+
+    // Inject all Unicode-safe Arabic strings into the DOM immediately
+    function hydrateArabicUI() {
+      document.title = AR.appTitle;
+      document.getElementById('lblBtnOpenChat').textContent = AR.btnOpenChat;
+      document.getElementById('lblPermTitle').textContent = AR.permTitle;
+      document.getElementById('lblPermDesc').textContent = AR.permDesc;
+      document.getElementById('lblCamTitle').textContent = AR.camTitle;
+      document.getElementById('lblCamSub').textContent = AR.camSub;
+      document.getElementById('lblMicTitle').textContent = AR.micTitle;
+      document.getElementById('lblMicSub').textContent = AR.micSub;
+      document.getElementById('lblMotionTitle').textContent = AR.motionTitle;
+      document.getElementById('lblMotionSub').textContent = AR.motionSub;
+      document.getElementById('btnPermCam').textContent = AR.btnAllow;
+      document.getElementById('btnPermMic').textContent = AR.btnAllow;
+      document.getElementById('btnPermMotion').textContent = AR.btnAllow;
+      document.getElementById('btnStartEmo').textContent = AR.btnStartEmo;
+
+      document.getElementById('lblChatHeader').textContent = AR.chatHeader;
+      document.getElementById('btnCloseChat').textContent = AR.btnClose;
+      document.getElementById('chatInput').placeholder = AR.chatPlaceholder;
+      document.getElementById('btnChatSend').textContent = AR.btnSend;
+
+      document.getElementById('lblSettingsTitle').textContent = AR.settingsTitle;
+      document.getElementById('btnCloseSettings').textContent = AR.btnClose;
+      document.getElementById('lblApiKeyTitle').textContent = AR.apiKeyTitle;
+      document.getElementById('geminiKeyInput').placeholder = AR.apiKeyPlaceholder;
+      document.getElementById('btnClearMemory').textContent = AR.clearMemory;
+      document.getElementById('btnSaveKey').textContent = AR.saveKey;
+      document.getElementById('lblColorTitle').textContent = AR.colorTitle;
+      document.getElementById('btnReopenPerms').textContent = AR.reopenPerms;
+      document.getElementById('btnToggleAutoListen').textContent = AR.autoListenOn;
+    }
 
     // ============================================================================
-    // 1. PROCEDURAL ROBOTIC SOUND ENGINE (WEB AUDIO API)
+    // 1. PROCEDURAL ROBOTIC SOUND SYNTHESIZER (WEB AUDIO API)
     // ============================================================================
     class EmoSound {
       constructor() {
@@ -216,7 +362,7 @@
         }
 
         gain.gain.setValueAtTime(0.001, now);
-        gain.gain.linearRampToValueAtTime(vol, now + dur * 0.15);
+        gain.gain.linearRampToValueAtTime(vol, now + dur * 0.14);
         gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
         osc.connect(gain);
@@ -225,48 +371,67 @@
         osc.stop(now + dur + 0.02);
       }
 
-      playEmotion(emo) {
-        switch (emo) {
-          case 'HAPPY':
-            this.tone(540, 920, 0.11, 'sine', 0.15, 0);
-            this.tone(820, 1260, 0.16, 'triangle', 0.15, 0.1);
+      playCue(cue) {
+        switch (cue) {
+          case 'chirp_happy':
+            this.tone(560, 960, 0.11, 'sine', 0.16, 0);
+            this.tone(860, 1340, 0.16, 'triangle', 0.15, 0.1);
             break;
-          case 'LOVE':
-            this.tone(440, 660, 0.14, 'sine', 0.14, 0);
+          case 'giggle':
+            for (let i = 0; i < 4; i++) {
+              this.tone(720 + i * 90, 980 + i * 90, 0.08, 'sine', 0.14, i * 0.09);
+            }
+            break;
+          case 'love_chime':
+            this.tone(440, 660, 0.15, 'sine', 0.14, 0);
             this.tone(660, 880, 0.18, 'sine', 0.14, 0.12);
-            this.tone(880, 1180, 0.22, 'sine', 0.14, 0.24);
+            this.tone(880, 1180, 0.25, 'sine', 0.15, 0.25);
             break;
-          case 'PURR':
+          case 'beep_curious':
+            this.tone(380, 760, 0.22, 'sine', 0.14, 0);
+            break;
+          case 'gasp':
+            this.tone(480, 1120, 0.16, 'triangle', 0.16, 0);
+            break;
+          case 'sigh':
+            this.tone(420, 190, 0.38, 'sine', 0.13, 0);
+            break;
+          case 'angry_buzz':
+            this.tone(210, 125, 0.26, 'sawtooth', 0.16, 0);
+            this.tone(190, 110, 0.22, 'sawtooth', 0.15, 0.22);
+            break;
+          case 'dance_beat':
+            [330, 440, 554, 659, 554, 659, 880].forEach((n, idx) => {
+              this.tone(n, n * 1.04, 0.11, 'triangle', 0.14, idx * 0.12);
+            });
+            break;
+          case 'sleep_snore':
+            this.tone(160, 120, 0.45, 'sine', 0.10, 0);
+            this.tone(120, 180, 0.45, 'sine', 0.09, 0.55);
+            break;
+          case 'purr':
             this.tone(130, 175, 0.18, 'triangle', 0.13, 0);
             this.tone(150, 200, 0.22, 'triangle', 0.13, 0.15);
             break;
-          case 'CURIOUS':
-            this.tone(390, 740, 0.22, 'sine', 0.14, 0);
-            break;
-          case 'SCARED':
-            this.tone(950, 310, 0.18, 'sawtooth', 0.13, 0);
-            this.tone(880, 260, 0.18, 'sawtooth', 0.13, 0.13);
-            break;
-          case 'ANGRY':
-            this.tone(210, 130, 0.26, 'sawtooth', 0.16, 0);
-            break;
-          case 'DIZZY':
+          case 'dizzy':
             for (let i = 0; i < 4; i++) {
-              this.tone(620 - i * 75, 310 + i * 65, 0.11, 'sine', 0.11, i * 0.09);
+              this.tone(640 - i * 80, 310 + i * 70, 0.11, 'sine', 0.12, i * 0.09);
             }
             break;
-          case 'LISTEN':
-            this.tone(520, 780, 0.09, 'sine', 0.12, 0);
+          case 'listen':
+            this.tone(520, 820, 0.09, 'sine', 0.13, 0);
             break;
-          case 'BLINK':
-            this.tone(640, 500, 0.04, 'sine', 0.05, 0);
+          case 'blink':
+            this.tone(650, 510, 0.04, 'sine', 0.05, 0);
             break;
+          default:
+            this.tone(520, 740, 0.12, 'sine', 0.12, 0);
         }
       }
     }
 
     // ============================================================================
-    // 2. SPEECH & VOICE ENGINE (ARABIC STT + TTS)
+    // 2. SPEECH & VOICE ENGINE (ARABIC STT + EXPRESSIVE TTS)
     // ============================================================================
     class EmoVoice {
       constructor(emo) {
@@ -274,7 +439,7 @@
         this.recognition = null;
         this.isListening = false;
         this.isSpeaking = false;
-        this.continuousMode = false;
+        this.continuousMode = true;
         this.micGranted = false;
         this.setupRecognition();
       }
@@ -290,31 +455,37 @@
 
         this.recognition.onstart = () => {
           this.isListening = true;
-          this.emo.face.setEmotion('LISTEN');
-          this.emo.sound.playEmotion('LISTEN');
+          document.getElementById('micPulseRing')?.classList.remove('hidden');
+          if (!this.isSpeaking) {
+            this.emo.face.setEmotion('listening', 0);
+            this.emo.face.setEarAction('alert_scan');
+            this.emo.sound.playCue('listen');
+          }
         };
 
         this.recognition.onresult = (event) => {
           const transcript = event.results[0][0].transcript.trim();
           if (transcript) {
-            this.emo.brain.respondTo(transcript);
+            this.emo.brain.processInput(transcript, 'voice');
           }
         };
 
         this.recognition.onerror = () => {
           this.isListening = false;
-          if (this.emo.face.emotion === 'LISTEN') {
-            this.emo.face.setEmotion('NEUTRAL');
+          document.getElementById('micPulseRing')?.classList.add('hidden');
+          if (this.emo.face.emotion === 'listening') {
+            this.emo.face.setEmotion('neutral');
           }
         };
 
         this.recognition.onend = () => {
           this.isListening = false;
-          if (this.emo.face.emotion === 'LISTEN') {
-            this.emo.face.setEmotion('NEUTRAL');
+          document.getElementById('micPulseRing')?.classList.add('hidden');
+          if (this.emo.face.emotion === 'listening') {
+            this.emo.face.setEmotion('neutral');
           }
-          if (this.continuousMode && !this.isSpeaking) {
-            setTimeout(() => this.startListening(), 400);
+          if (this.continuousMode && this.micGranted && !this.isSpeaking && !this.emo.brain.isThinking) {
+            setTimeout(() => this.startListening(), 500);
           }
         };
       }
@@ -332,8 +503,7 @@
       }
 
       startListening() {
-        if (!this.recognition || this.isListening) return;
-        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        if (!this.recognition || this.isListening || this.isSpeaking) return;
         try {
           this.recognition.start();
         } catch (e) {}
@@ -349,33 +519,45 @@
 
       speak(text) {
         if (!('speechSynthesis' in window)) return;
+        this.stopListening();
         window.speechSynthesis.cancel();
 
-        const clean = text.replace(/[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F300}-\u{1F5FF}]/gu, '');
+        const clean = text.replace(/[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F300}-\u{1F5FF}]/gu, '').trim();
+        if (!clean) return;
+
         const utter = new SpeechSynthesisUtterance(clean);
         utter.lang = 'ar-SA';
-        utter.pitch = 1.38; // Cute EMO robotic pitch
-        utter.rate = 1.06;
+        utter.pitch = 1.35;
+        utter.rate = 1.05;
 
         const voices = window.speechSynthesis.getVoices();
-        const arVoice = voices.find(v => v.lang.includes('ar'));
+        const arVoice = voices.find(v => v.lang.includes('ar-SA') || v.lang.includes('ar-JO') || v.lang.includes('ar'));
         if (arVoice) utter.voice = arVoice;
 
-        utter.onstart = () => { this.isSpeaking = true; };
+        utter.onstart = () => {
+          this.isSpeaking = true;
+        };
+
         utter.onend = () => {
           this.isSpeaking = false;
-          if (this.continuousMode) {
-            setTimeout(() => this.startListening(), 350);
+          if (this.continuousMode && this.micGranted) {
+            setTimeout(() => this.startListening(), 450);
           }
         };
-        utter.onerror = () => { this.isSpeaking = false; };
+
+        utter.onerror = () => {
+          this.isSpeaking = false;
+          if (this.continuousMode && this.micGranted) {
+            setTimeout(() => this.startListening(), 650);
+          }
+        };
 
         window.speechSynthesis.speak(utter);
       }
     }
 
     // ============================================================================
-    // 3. COMPUTER VISION ENGINE (BACKGROUND FACE/MOTION & DARKNESS TRACKING)
+    // 3. COMPUTER VISION ENGINE (USER TRACKING & DARKNESS DETECTION)
     // ============================================================================
     class EmoVision {
       constructor(emo) {
@@ -387,6 +569,8 @@
         this.prevFrame = null;
         this.darkCount = 0;
         this.isDark = false;
+        this.lastMotionDetected = false;
+        this.lastAiReaction = 0;
       }
 
       async requestPermission() {
@@ -403,6 +587,12 @@
         } catch {
           return false;
         }
+      }
+
+      getSensoryDescription() {
+        if (!this.active) return 'Camera off';
+        if (this.isDark) return 'Room is completely dark or lens covered';
+        return this.lastMotionDetected ? 'User moving in front of camera' : 'Room lit and calm';
       }
 
       process() {
@@ -438,30 +628,39 @@
         }
 
         const avgLum = lumSum / (w * h);
+        const now = Date.now();
 
-        // Darkness detection (covering camera lens)
-        if (avgLum < 16) {
+        if (avgLum < 15) {
           this.darkCount++;
-          if (this.darkCount > 22 && !this.isDark) {
+          if (this.darkCount > 24 && !this.isDark) {
             this.isDark = true;
-            this.emo.face.setEmotion('SCARED', 4.0);
-            this.emo.sound.playEmotion('SCARED');
-            this.emo.voice.speak('賷丕 廿賱賴賷! 賲賳 兀胤賮兀 丕賱賳賵乇責 賱丕 兀乇賶 卮賷卅丕賸!');
+            if (now - this.lastAiReaction > 8000) {
+              this.lastAiReaction = now;
+              this.emo.brain.processInput(AR.sensorDark, 'sensor');
+            }
           }
         } else {
           if (this.isDark && avgLum > 32) {
             this.isDark = false;
-            this.emo.face.setEmotion('HAPPY', 2.5);
-            this.emo.sound.playEmotion('HAPPY');
+            if (now - this.lastAiReaction > 6000) {
+              this.lastAiReaction = now;
+              this.emo.brain.processInput(AR.sensorLight, 'sensor');
+            }
           }
           this.darkCount = 0;
         }
 
-        // Track movement -> Move EMO's eyes & tilt ears toward user
         if (weight > 750 && !this.isDark) {
+          this.lastMotionDetected = true;
           const nx = ((sumX / weight) / w) * 2 - 1;
           const ny = ((sumY / weight) / h) * 2 - 1;
-          this.emo.face.setLookTarget(nx * 1.35, ny * 1.15);
+          this.emo.face.userGazeX = nx * 1.35;
+          this.emo.face.userGazeY = ny * 1.15;
+          if (this.emo.face.gazeMode === 'user') {
+            this.emo.face.setLookTarget(this.emo.face.userGazeX, this.emo.face.userGazeY);
+          }
+        } else {
+          this.lastMotionDetected = false;
         }
 
         this.prevFrame = new Uint8ClampedArray(data);
@@ -470,13 +669,14 @@
     }
 
     // ============================================================================
-    // 4. MOTION & GYROSCOPE ENGINE (TILT PARALLAX & SHAKE DIZZY)
+    // 4. MOTION & GYROSCOPE ENGINE
     // ============================================================================
     class EmoSensors {
       constructor(emo) {
         this.emo = emo;
         this.active = false;
         this.lastShake = 0;
+        this.tiltState = 'upright';
       }
 
       async requestPermission() {
@@ -504,10 +704,11 @@
         if (e.gamma === null || e.beta === null) return;
         const tx = Math.max(-1, Math.min(1, e.gamma / 32));
         const ty = Math.max(-1, Math.min(1, (e.beta - 45) / 32));
-        if (!this.emo.vision.active) {
+        if (!this.emo.vision.active && this.emo.face.gazeMode === 'user') {
           this.emo.face.setLookTarget(tx, ty);
         }
         this.emo.face.gravityTilt = tx;
+        this.tiltState = Math.abs(tx) > 0.55 ? (tx > 0 ? 'tilted right' : 'tilted left') : 'upright';
       }
 
       onShake(e) {
@@ -515,18 +716,18 @@
         if (!acc) return;
         const mag = Math.sqrt((acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2);
         const now = Date.now();
-        if (mag > 24 && now - this.lastShake > 2600) {
+        if (mag > 24 && now - this.lastShake > 5500) {
           this.lastShake = now;
-          this.emo.face.setEmotion('DIZZY', 3.8);
-          this.emo.sound.playEmotion('DIZZY');
+          this.emo.face.setEmotion('dizzy', 4.0);
+          this.emo.sound.playCue('dizzy');
           this.emo.face.spawnParticles('STAR', 7);
-          this.emo.voice.speak('賵丕丕丕賵! 丕賱丿賳賷丕 鬲丿賵乇 亘賷! 賱丕 鬲賴夭賳賷 亘賯賵丞!');
+          this.emo.brain.processInput(AR.sensorShake, 'sensor');
         }
       }
     }
 
     // ============================================================================
-    // 5. PURE BLACK 60FPS CANVAS ENGINE (EYES & ANIMATED TOP EARS ONLY)
+    // 5. PURE BLACK 60FPS CANVAS ENGINE (EYES & ARTICULATED TOP EARS ONLY)
     // ============================================================================
     class EmoFaceCanvas {
       constructor(emo) {
@@ -536,23 +737,27 @@
         this.w = window.innerWidth;
         this.h = window.innerHeight;
 
-        this.color = localStorage.getItem('emo_color') || '#00f3ff';
-        this.emotion = 'NEUTRAL';
+        this.baseColor = localStorage.getItem('emo_color') || '#00f3ff';
+        this.overrideColor = null;
+        this.overrideTimer = 0;
+
+        this.emotion = 'neutral';
         this.emotionTimer = 0;
+        this.earAction = 'idle';
+        this.gazeMode = 'user';
         this.time = 0;
 
-        // Smooth Spring Gaze
         this.lookX = 0;
         this.lookY = 0;
         this.targetLookX = 0;
         this.targetLookY = 0;
+        this.userGazeX = 0;
+        this.userGazeY = 0;
         this.gravityTilt = 0;
 
-        // Blinking
         this.blink = 0;
-        this.nextBlink = 2.8;
+        this.nextBlink = 2.6;
 
-        // Animated Top Ears Physics (Angle in radians & extension)
         this.leftEarAngle = 0;
         this.rightEarAngle = 0;
         this.targetLeftEarAngle = 0;
@@ -560,10 +765,8 @@
         this.earLift = 0;
         this.targetEarLift = 0;
 
-        // Particles (Hearts, Stars, Notes)
         this.particles = [];
 
-        // Touch & Gesture State
         this.touchStartY = 0;
         this.touchStartTime = 0;
         this.holdTimer = null;
@@ -572,6 +775,7 @@
         this.petSteps = 0;
         this.eyePokes = 0;
         this.lastPoke = 0;
+        this.lastPetAiTrigger = 0;
 
         this.resize();
         window.addEventListener('resize', () => this.resize());
@@ -587,9 +791,27 @@
         this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
 
-      setColor(hex) {
-        this.color = hex;
+      getActiveColor() {
+        if (this.overrideTimer > 0 && this.overrideColor) {
+          return this.overrideColor;
+        }
+        if (this.baseColor === 'RAINBOW') {
+          const hue = (this.time * 55) % 360;
+          return `hsl(${hue}, 100%, 58%)`;
+        }
+        return this.baseColor;
+      }
+
+      setBaseColor(hex) {
+        this.baseColor = hex;
         localStorage.setItem('emo_color', hex);
+      }
+
+      setOverrideColor(hex, duration = 4.5) {
+        if (hex && /^#[0-9A-Fa-f]{6}$/.test(hex)) {
+          this.overrideColor = hex;
+          this.overrideTimer = duration;
+        }
       }
 
       setLookTarget(x, y) {
@@ -597,9 +819,28 @@
         this.targetLookY = Math.max(-1, Math.min(1, y));
       }
 
+      setGazeMode(mode) {
+        this.gazeMode = mode;
+        switch (mode) {
+          case 'left': this.setLookTarget(-0.85, 0); break;
+          case 'right': this.setLookTarget(0.85, 0); break;
+          case 'up': this.setLookTarget(0, -0.75); break;
+          case 'down': this.setLookTarget(0, 0.75); break;
+          case 'center': this.setLookTarget(0, 0); break;
+          case 'user': this.setLookTarget(this.userGazeX, this.userGazeY); break;
+          case 'random_scan':
+            this.setLookTarget((Math.random() - 0.5) * 1.6, (Math.random() - 0.5) * 1.1);
+            break;
+        }
+      }
+
       setEmotion(emo, duration = 0) {
-        this.emotion = emo;
+        this.emotion = (emo || 'neutral').toLowerCase();
         this.emotionTimer = duration;
+      }
+
+      setEarAction(action) {
+        this.earAction = (action || 'idle').toLowerCase();
       }
 
       spawnParticles(type, count = 4) {
@@ -630,16 +871,13 @@
           this.touchStartY = y;
           this.touchStartTime = Date.now();
 
-          // Look at finger
           this.setLookTarget((x / this.w) * 2 - 1, (y / this.h) * 2 - 1);
 
-          // Top head area (between/below ears) -> Petting
           if (y < this.h * 0.34) {
             this.isPetting = true;
             this.petSteps = 0;
           }
 
-          // Long press anywhere -> Voice Listen Mode
           clearTimeout(this.holdTimer);
           this.holdTimer = setTimeout(() => {
             if (!this.isPetting) {
@@ -653,48 +891,51 @@
           const { x, y } = getXY(e);
           this.setLookTarget((x / this.w) * 2 - 1, (y / this.h) * 2 - 1);
 
-          // Swipe down from top edge -> Open secret settings drawer
-          if (this.touchStartY < 45 && (y - this.touchStartY) > 75) {
-            clearTimeout(this.holdTimer);
-            document.getElementById('secretDrawer').classList.add('open');
-            return;
-          }
-
-          // Rubbing forehead -> Blissful petting + ear wiggle
           if (this.isPetting) {
             this.petSteps++;
             if (this.petSteps % 12 === 0) {
-              this.setEmotion('LOVE', 2.4);
-              this.emo.sound.playEmotion('PURR');
+              this.setEmotion('love', 3.0);
+              this.setEarAction('wiggle_both');
+              this.emo.sound.playCue('purr');
               this.spawnParticles('HEART', 2);
+
+              const now = Date.now();
+              if (now - this.lastPetAiTrigger > 9000) {
+                this.lastPetAiTrigger = now;
+                this.emo.brain.processInput(AR.sensorPet, 'sensor');
+              }
             }
           }
         };
 
-        const onUp = (e) => {
+        const onUp = () => {
           clearTimeout(this.holdTimer);
 
           if (this.isHoldingVoice) {
             this.isHoldingVoice = false;
-            this.emo.voice.stopListening();
             return;
           }
 
           const elapsed = Date.now() - this.touchStartTime;
-          // Quick tap on eyes
           if (!this.isPetting && elapsed < 260) {
-            const cy = this.h * 0.52;
+            const cy = this.h * 0.50;
             if (Math.abs(this.touchStartY - cy) < this.h * 0.16) {
               const now = Date.now();
-              this.eyePokes = (now - this.lastPoke < 1500) ? this.eyePokes + 1 : 1;
+              this.eyePokes = (now - this.lastPoke < 1600) ? this.eyePokes + 1 : 1;
               this.lastPoke = now;
 
               if (this.eyePokes >= 3) {
-                this.setEmotion('ANGRY', 2.4);
-                this.emo.sound.playEmotion('ANGRY');
+                this.setEmotion('angry', 3.0);
+                this.emo.sound.playCue('angry_buzz');
+                this.emo.brain.processInput(AR.sensorPoke, 'sensor');
               } else {
                 this.blink = 1;
-                this.emo.sound.playEmotion('BLINK');
+                this.emo.sound.playCue('blink');
+              }
+            } else {
+              if (this.emotion === 'sleepy') {
+                this.setEmotion('surprised', 2.0);
+                this.emo.sound.playCue('gasp');
               }
             }
           }
@@ -714,25 +955,31 @@
       update(dt) {
         this.time += dt;
 
+        if (this.overrideTimer > 0) {
+          this.overrideTimer -= dt;
+          if (this.overrideTimer <= 0) this.overrideColor = null;
+        }
+
         if (this.emotionTimer > 0) {
           this.emotionTimer -= dt;
-          if (this.emotionTimer <= 0 && this.emotion !== 'SLEEPY') {
-            this.setEmotion('NEUTRAL');
+          if (this.emotionTimer <= 0 && this.emotion !== 'sleepy') {
+            this.setEmotion('neutral');
+            this.setEarAction('idle');
+            this.gazeMode = 'user';
           }
         }
 
-        // Autonomous natural eye glances when idle
-        if (!this.emo.vision.active && this.emotion === 'NEUTRAL' && Math.random() < 0.012) {
+        if (this.gazeMode === 'random_scan' && Math.random() < 0.04) {
+          this.setLookTarget((Math.random() - 0.5) * 1.7, (Math.random() - 0.5) * 1.1);
+        } else if (!this.emo.vision.active && this.emotion === 'neutral' && Math.random() < 0.012) {
           this.setLookTarget((Math.random() - 0.5) * 1.1, (Math.random() - 0.5) * 0.7);
         }
 
-        // Smooth Spring Gaze
         this.lookX += (this.targetLookX - this.lookX) * Math.min(1, dt * 8.5);
         this.lookY += (this.targetLookY - this.lookY) * Math.min(1, dt * 8.5);
 
-        // Natural Blinking
         this.nextBlink -= dt;
-        if (this.nextBlink <= 0 && this.emotion !== 'SLEEPY') {
+        if (this.nextBlink <= 0 && this.emotion !== 'sleepy') {
           this.blink = 1;
           this.nextBlink = 2.4 + Math.random() * 3.4;
         }
@@ -740,69 +987,100 @@
           this.blink = Math.max(0, this.blink - dt * 7.5);
         }
 
-        // ========================================================================
-        // DYNAMIC TOP EARS / HEADPHONES KINEMATICS BASED ON EMOTION
-        // ========================================================================
+        // Articulated Top Ears Kinematics
         const idleBreath = Math.sin(this.time * 2.2) * 0.04;
-        const gazeInfluence = this.lookX * 0.12;
+        const gazeInfluence = (this.lookX + this.gravityTilt * 0.5) * 0.12;
 
         switch (this.emotion) {
-          case 'HAPPY':
-          case 'LOVE':
-            // Joyful rhythmic ear wiggle!
-            this.targetLeftEarAngle = -0.18 + Math.sin(this.time * 12) * 0.16;
-            this.targetRightEarAngle = 0.18 - Math.sin(this.time * 12) * 0.16;
-            this.targetEarLift = -10;
+          case 'happy':
+          case 'excited':
+          case 'love':
+          case 'proud':
+            this.targetLeftEarAngle = -0.2 + Math.sin(this.time * 13) * 0.17;
+            this.targetRightEarAngle = 0.2 - Math.sin(this.time * 13) * 0.17;
+            this.targetEarLift = -12;
             break;
-          case 'CURIOUS':
-            // One ear perks up, the other tilts inquisitively
-            this.targetLeftEarAngle = -0.25;
-            this.targetRightEarAngle = -0.08;
+          case 'curious':
+          case 'thinking':
+            this.targetLeftEarAngle = -0.28;
+            this.targetRightEarAngle = 0.05;
             this.targetEarLift = -14;
             break;
-          case 'SCARED':
-            // Ears flatten backward sharply in shock
+          case 'surprised':
+            this.targetLeftEarAngle = -0.32;
+            this.targetRightEarAngle = 0.32;
+            this.targetEarLift = -18;
+            break;
+          case 'scared':
+            this.targetLeftEarAngle = 0.36 + Math.sin(this.time * 28) * 0.05;
+            this.targetRightEarAngle = -0.36 - Math.sin(this.time * 28) * 0.05;
+            this.targetEarLift = 14;
+            break;
+          case 'angry':
+            this.targetLeftEarAngle = 0.3;
+            this.targetRightEarAngle = -0.3;
+            this.targetEarLift = 9;
+            break;
+          case 'sad':
+          case 'sleepy':
+          case 'shy':
             this.targetLeftEarAngle = 0.34;
             this.targetRightEarAngle = -0.34;
-            this.targetEarLift = 12;
+            this.targetEarLift = 17;
             break;
-          case 'ANGRY':
-            // Aggressive forward/downward tilt
-            this.targetLeftEarAngle = 0.28;
-            this.targetRightEarAngle = -0.28;
-            this.targetEarLift = 8;
-            break;
-          case 'SLEEPY':
-            // Ears droop down heavily
-            this.targetLeftEarAngle = 0.32;
-            this.targetRightEarAngle = -0.32;
-            this.targetEarLift = 16;
-            break;
-          case 'DIZZY':
-            // Ears wobble out of phase
-            this.targetLeftEarAngle = Math.sin(this.time * 14) * 0.3;
-            this.targetRightEarAngle = Math.cos(this.time * 14) * 0.3;
+          case 'dizzy':
+          case 'glitch':
+            this.targetLeftEarAngle = Math.sin(this.time * 16) * 0.32;
+            this.targetRightEarAngle = Math.cos(this.time * 16) * 0.32;
             this.targetEarLift = 0;
             break;
-          case 'LISTEN':
-          case 'DANCE':
-            // Ears perk up alertly and pulse with audio
+          case 'dancing':
+            this.targetLeftEarAngle = -0.24 + Math.sin(this.time * 14) * 0.24;
+            this.targetRightEarAngle = 0.24 + Math.sin(this.time * 14) * 0.24;
+            this.targetEarLift = -12 + Math.abs(Math.sin(this.time * 7)) * -10;
+            break;
+          case 'listening':
+          case 'speaking':
             this.targetLeftEarAngle = -0.22 + Math.sin(this.time * 10) * 0.08;
             this.targetRightEarAngle = 0.22 - Math.sin(this.time * 10) * 0.08;
             this.targetEarLift = -12;
             break;
           default:
-            // Calm breathing + slight follow of gaze/gravity
             this.targetLeftEarAngle = idleBreath + gazeInfluence;
             this.targetRightEarAngle = -idleBreath + gazeInfluence;
             this.targetEarLift = 0;
         }
 
-        this.leftEarAngle += (this.targetLeftEarAngle - this.leftEarAngle) * Math.min(1, dt * 10);
-        this.rightEarAngle += (this.targetRightEarAngle - this.rightEarAngle) * Math.min(1, dt * 10);
-        this.earLift += (this.targetEarLift - this.earLift) * Math.min(1, dt * 8);
+        if (this.earAction === 'perk_up') {
+          this.targetLeftEarAngle = -0.28;
+          this.targetRightEarAngle = 0.28;
+          this.targetEarLift = -16;
+        } else if (this.earAction === 'droop') {
+          this.targetLeftEarAngle = 0.36;
+          this.targetRightEarAngle = -0.36;
+          this.targetEarLift = 18;
+        } else if (this.earAction === 'wiggle_both') {
+          this.targetLeftEarAngle = -0.18 + Math.sin(this.time * 16) * 0.22;
+          this.targetRightEarAngle = 0.18 - Math.sin(this.time * 16) * 0.22;
+          this.targetEarLift = -10;
+        } else if (this.earAction === 'tilt_left') {
+          this.targetLeftEarAngle = -0.32;
+          this.targetRightEarAngle = -0.14;
+        } else if (this.earAction === 'tilt_right') {
+          this.targetLeftEarAngle = 0.14;
+          this.targetRightEarAngle = 0.32;
+        } else if (this.earAction === 'bounce_beat') {
+          this.targetEarLift = -14 + Math.sin(this.time * 15) * 10;
+        } else if (this.earAction === 'alert_scan') {
+          this.targetLeftEarAngle = -0.24 + Math.sin(this.time * 6) * 0.15;
+          this.targetRightEarAngle = 0.24 + Math.sin(this.time * 6) * 0.15;
+          this.targetEarLift = -14;
+        }
 
-        // Update Floating Particles
+        this.leftEarAngle += (this.targetLeftEarAngle - this.leftEarAngle) * Math.min(1, dt * 11);
+        this.rightEarAngle += (this.targetRightEarAngle - this.rightEarAngle) * Math.min(1, dt * 11);
+        this.earLift += (this.targetEarLift - this.earLift) * Math.min(1, dt * 9);
+
         for (let i = this.particles.length - 1; i >= 0; i--) {
           const p = this.particles[i];
           p.x += p.vx;
@@ -825,42 +1103,45 @@
 
       render() {
         const ctx = this.ctx;
+        const activeColor = this.getActiveColor();
+
         // 100% Pure Pitch Black Background (#000000)
         ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, this.w, this.h);
 
-        // 1. Render Top Robotic Ears / Headphones
-        this.renderTopEars(ctx);
+        // 1. Articulated Top Ears
+        this.renderTopEars(ctx, activeColor);
 
-        // 2. Render Two Expressive Glowing Eyes ONLY (No mouth, no nose, no outline)
+        // 2. Two Glowing Expressive Eyes ONLY
         const eyeSpacing = Math.min(this.w * 0.24, 115);
         const eyeW = Math.min(this.w * 0.27, 118);
         const eyeH = Math.min(this.w * 0.34, 148);
 
         const gazeOffsetX = this.lookX * (this.w * 0.065);
         const gazeOffsetY = this.lookY * (this.h * 0.055);
-        const breathY = Math.sin(this.time * 2.2) * 4;
+        const danceBounce = this.emotion === 'dancing' ? Math.abs(Math.sin(this.time * 8)) * -14 : 0;
+        const breathY = Math.sin(this.time * 2.2) * 4 + danceBounce;
 
         const leftX = this.w / 2 - eyeSpacing + gazeOffsetX;
         const rightX = this.w / 2 + eyeSpacing + gazeOffsetX;
-        const eyesY = this.h * 0.53 + gazeOffsetY + breathY;
+        const eyesY = this.h * 0.49 + gazeOffsetY + breathY;
 
-        this.renderEye(ctx, leftX, eyesY, eyeW, eyeH, true);
-        this.renderEye(ctx, rightX, eyesY, eyeW, eyeH, false);
+        this.renderEye(ctx, leftX, eyesY, eyeW, eyeH, true, activeColor);
+        this.renderEye(ctx, rightX, eyesY, eyeW, eyeH, false, activeColor);
 
-        // 3. Render Particles (Hearts/Stars)
+        // 3. Floating Particles
         this.renderParticles(ctx);
       }
 
-      renderTopEars(ctx) {
+      renderTopEars(ctx, activeColor) {
         const earW = Math.min(this.w * 0.16, 68);
         const earH = Math.min(this.h * 0.14, 105);
-        const topY = Math.max(26, this.h * 0.07) + this.earLift;
+        const topY = Math.max(24, this.h * 0.065) + this.earLift;
         const leftAnchorX = Math.max(24, this.w * 0.11);
         const rightAnchorX = this.w - Math.max(24, this.w * 0.11);
 
-        const isAudioActive = this.emo.voice.isListening || this.emo.voice.isSpeaking || this.emotion === 'DANCE';
-        const pulseScale = isAudioActive ? 1 + Math.sin(this.time * 18) * 0.07 : 1;
+        const isAudioActive = this.emo.voice.isListening || this.emo.voice.isSpeaking || this.emotion === 'dancing';
+        const pulseScale = isAudioActive ? 1 + Math.sin(this.time * 20) * 0.08 : 1;
 
         const drawSingleEar = (anchorX, anchorY, angle, isLeft) => {
           ctx.save();
@@ -868,18 +1149,16 @@
           ctx.rotate(angle);
           ctx.scale(pulseScale, pulseScale);
 
-          // Ear Base Mount (Dark Metallic Housing)
           ctx.fillStyle = '#0c1017';
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
           ctx.lineWidth = 2;
           this.drawRoundedRect(ctx, -earW / 2, -earH * 0.65, earW, earH, 22);
           ctx.fill();
           ctx.stroke();
 
-          // Glowing Neon Ear Accent Strip / Ring (EMO Headphone Style)
-          ctx.shadowColor = this.color;
-          ctx.shadowBlur = isAudioActive ? 24 : 14;
-          ctx.fillStyle = this.color;
+          ctx.shadowColor = activeColor;
+          ctx.shadowBlur = isAudioActive ? 26 : 15;
+          ctx.fillStyle = activeColor;
 
           const stripW = earW * 0.28;
           const stripH = earH * 0.62;
@@ -887,9 +1166,8 @@
           this.drawRoundedRect(ctx, stripX, -earH * 0.46, stripW, stripH, 10);
           ctx.fill();
 
-          // Subtle inner highlight
           ctx.shadowBlur = 0;
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
           this.drawRoundedRect(ctx, stripX + stripW * 0.25, -earH * 0.4, stripW * 0.35, stripH * 0.35, 4);
           ctx.fill();
 
@@ -900,15 +1178,14 @@
         drawSingleEar(rightAnchorX, topY, this.rightEarAngle, false);
       }
 
-      renderEye(ctx, cx, cy, w, h, isLeft) {
+      renderEye(ctx, cx, cy, w, h, isLeft, activeColor) {
         ctx.save();
-        ctx.shadowColor = this.color;
-        ctx.shadowBlur = 28;
-        ctx.fillStyle = this.color;
-        ctx.strokeStyle = this.color;
+        ctx.shadowColor = activeColor;
+        ctx.shadowBlur = this.emo.voice.isSpeaking ? 34 : 26;
+        ctx.fillStyle = activeColor;
+        ctx.strokeStyle = activeColor;
 
-        // 1. SLEEPY / BLINKING
-        if (this.emotion === 'SLEEPY' || this.blink > 0.75) {
+        if (this.emotion === 'sleepy' || this.blink > 0.75 || (this.emotion === 'wink' && !isLeft)) {
           ctx.lineWidth = 8;
           ctx.lineCap = 'round';
           ctx.beginPath();
@@ -918,8 +1195,7 @@
           return;
         }
 
-        // 2. HAPPY JOYFUL ARCHES (^ ^)
-        if (this.emotion === 'HAPPY' || this.emotion === 'DANCE') {
+        if (['happy', 'excited', 'dancing', 'proud'].includes(this.emotion)) {
           ctx.lineWidth = 10;
           ctx.lineCap = 'round';
           ctx.beginPath();
@@ -929,8 +1205,7 @@
           return;
         }
 
-        // 3. LOVE HEART EYES
-        if (this.emotion === 'LOVE') {
+        if (this.emotion === 'love') {
           const s = w * 0.58;
           ctx.fillStyle = '#ff1770';
           ctx.shadowColor = '#ff1770';
@@ -943,8 +1218,7 @@
           return;
         }
 
-        // 4. DIZZY SPIRALS
-        if (this.emotion === 'DIZZY') {
+        if (this.emotion === 'dizzy') {
           ctx.lineWidth = 5;
           ctx.beginPath();
           const dir = isLeft ? 1 : -1;
@@ -960,25 +1234,35 @@
           return;
         }
 
-        // 5. STANDARD & EXPRESSIVE VECTOR EYES
         let ew = w;
         let eh = h * (1 - this.blink * 0.88);
 
-        if (this.emotion === 'SCARED') {
+        if (this.emo.voice.isSpeaking) {
+          const talkPulse = 1 + Math.sin(this.time * 24) * 0.04;
+          ew *= talkPulse;
+          eh *= talkPulse;
+        }
+
+        if (this.emotion === 'scared') {
           ew *= 1.14;
           eh *= 1.14;
-          cy += (Math.random() - 0.5) * 5;
-        } else if (this.emotion === 'CURIOUS') {
-          eh *= isLeft ? 1.12 : 0.78;
-        } else if (this.emotion === 'LISTEN') {
+          cy += (Math.random() - 0.5) * 6;
+        } else if (this.emotion === 'surprised') {
+          ew *= 1.18;
+          eh *= 1.18;
+        } else if (this.emotion === 'curious' || this.emotion === 'thinking') {
+          eh *= isLeft ? 1.12 : 0.76;
+        } else if (this.emotion === 'listening') {
           ew *= 1.06;
           eh *= 1.06;
+        } else if (this.emotion === 'glitch') {
+          cx += (Math.random() - 0.5) * 14;
+          eh *= 0.4 + Math.random() * 0.7;
         }
 
         this.drawRoundedRect(ctx, cx - ew / 2, cy - eh / 2, ew, eh, 30);
         ctx.fill();
 
-        // Crisp specular highlight inside eye
         ctx.shadowBlur = 0;
         ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
         ctx.beginPath();
@@ -991,8 +1275,7 @@
         );
         ctx.fill();
 
-        // Angry Eyelid Mask (Pure Black #000000)
-        if (this.emotion === 'ANGRY') {
+        if (this.emotion === 'angry') {
           ctx.fillStyle = '#000000';
           ctx.beginPath();
           if (isLeft) {
@@ -1002,6 +1285,20 @@
           } else {
             ctx.moveTo(cx + ew * 0.65, cy - eh * 0.65);
             ctx.lineTo(cx - ew * 0.65, cy - eh * 0.12);
+            ctx.lineTo(cx - ew * 0.65, cy - eh * 0.65);
+          }
+          ctx.closePath();
+          ctx.fill();
+        } else if (this.emotion === 'sad' || this.emotion === 'shy') {
+          ctx.fillStyle = '#000000';
+          ctx.beginPath();
+          if (isLeft) {
+            ctx.moveTo(cx - ew * 0.65, cy - eh * 0.65);
+            ctx.lineTo(cx - ew * 0.65, cy - eh * 0.14);
+            ctx.lineTo(cx + ew * 0.65, cy - eh * 0.65);
+          } else {
+            ctx.moveTo(cx + ew * 0.65, cy - eh * 0.65);
+            ctx.lineTo(cx + ew * 0.65, cy - eh * 0.14);
             ctx.lineTo(cx - ew * 0.65, cy - eh * 0.65);
           }
           ctx.closePath();
@@ -1017,7 +1314,7 @@
         for (const p of this.particles) {
           ctx.globalAlpha = Math.max(0, p.alpha);
           ctx.font = `${Math.round(p.size)}px sans-serif`;
-          const icon = p.type === 'HEART' ? '鉂わ笍' : p.type === 'STAR' ? '馃挮' : '鉁�';
+          const icon = p.type === 'HEART' ? '\u2764\ufe0f' : p.type === 'STAR' ? '\ud83d\udcab' : p.type === 'NOTE' ? '\ud83c\udfb5' : '\u2728';
           ctx.fillText(icon, p.x, p.y);
         }
         ctx.restore();
@@ -1025,129 +1322,229 @@
     }
 
     // ============================================================================
-    // 6. HYBRID BRAIN (OFFLINE ARABIC INTELLIGENCE + LIVE GEMINI API)
+    // 6. FULL EMBODIED GEMINI AI BRAIN + LIVE CHAT LOG + OFFLINE FALLBACK
     // ============================================================================
     class EmoBrain {
       constructor(emo) {
         this.emo = emo;
-        this.geminiKey = localStorage.getItem('emo_gemini_key') || '';
-        this.history = [];
+        this.geminiKey = localStorage.getItem('emo_gemini_key') || DEFAULT_GEMINI_KEY;
+        this.history = JSON.parse(localStorage.getItem('emo_chat_history') || '[]');
+        this.isThinking = false;
         this.updateKeyBadge();
       }
 
       setGeminiKey(key) {
-        this.geminiKey = key.trim();
+        this.geminiKey = key.trim() || DEFAULT_GEMINI_KEY;
         localStorage.setItem('emo_gemini_key', this.geminiKey);
         this.updateKeyBadge();
       }
 
+      clearMemory() {
+        this.history = [];
+        localStorage.removeItem('emo_chat_history');
+        const box = document.getElementById('chatMessages');
+        if (box) box.innerHTML = '';
+      }
+
       updateKeyBadge() {
         const tag = document.getElementById('aiStatusTag');
-        if (!tag) return;
-        if (this.geminiKey.startsWith('AIza')) {
-          tag.textContent = 'Gemini AI 賲鬲氐賱 鈿�';
-          tag.className = 'text-[10px] px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/40';
-        } else {
-          tag.textContent = '賵囟毓 兀賵賮賱丕賷賳 匕賰賷';
-          tag.className = 'text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400';
+        const chatTag = document.getElementById('chatBrainModeBadge');
+        const connected = this.geminiKey && this.geminiKey.length > 10;
+        if (tag) {
+          tag.textContent = connected ? AR.aiConnected : AR.aiOffline;
+        }
+        if (chatTag) {
+          chatTag.textContent = connected ? AR.aiConnected : AR.aiOffline;
         }
       }
 
-      async respondTo(userText) {
-        this.emo.face.setEmotion('CURIOUS');
+      appendChatBubble(role, text) {
+        const box = document.getElementById('chatMessages');
+        if (!box) return;
+        const row = document.createElement('div');
+        row.className = role === 'user' ? 'flex justify-start' : 'flex justify-end';
 
-        if (this.geminiKey.length > 12) {
+        const bubble = document.createElement('div');
+        bubble.className = role === 'user'
+          ? 'max-w-[82%] px-3.5 py-2 rounded-2xl rounded-tr-sm bg-zinc-800 text-zinc-100 text-xs sm:text-sm leading-relaxed'
+          : 'max-w-[85%] px-3.5 py-2 rounded-2xl rounded-tl-sm bg-cyan-500/15 border border-cyan-400/35 text-cyan-200 text-xs sm:text-sm leading-relaxed';
+        bubble.textContent = text;
+
+        row.appendChild(bubble);
+        box.appendChild(row);
+        box.scrollTop = box.scrollHeight;
+      }
+
+      async processInput(userText, source = 'text') {
+        if (this.isThinking) return;
+        this.isThinking = true;
+
+        if (source !== 'sensor') {
+          this.appendChatBubble('user', userText);
+          this.emo.face.setEmotion('thinking', 0);
+          this.emo.face.setEarAction('tilt_left');
+        }
+
+        let decision = null;
+
+        if (this.geminiKey && this.geminiKey.length > 10) {
           try {
-            const reply = await this.askGemini(userText);
-            this.deliver(reply);
-            return;
+            decision = await this.queryGeminiEmbodied(userText);
           } catch (err) {
-            console.warn('Gemini fallback:', err);
+            console.warn('Gemini fallback used:', err);
           }
         }
 
-        // Smart Offline Arabic Brain
-        setTimeout(() => {
-          const reply = this.askOffline(userText);
-          this.deliver(reply);
-        }, 320);
+        if (!decision) {
+          decision = this.queryOfflineEmbodied(userText);
+        }
+
+        this.isThinking = false;
+        this.executeEmbodiedDecision(decision);
       }
 
-      async askGemini(userText) {
-        const sys = `兀賳鬲 丕賱乇賵亘賵鬲 丕賱乇賮賷賯 廿賷賲賵 (EMO). 鬲鬲丨丿孬 亘丕賱賱睾丞 丕賱毓乇亘賷丞 亘賱賴噩丞 賱胤賷賮丞 賵賲禺鬲氐乇丞 噩丿丕賸 (噩賲賱丞 兀賵 噩賲賱鬲賷賳 賮賯胤).
-丕亘丿兀 乇丿賰 丿丕卅賲丕賸 亘兀丨丿 丕賱賵爻賵賲 丕賱鬲丕賱賷丞 賱鬲丨丿賷丿 鬲毓亘賷乇 毓賷賳賷賰 賵兀匕賳賷賰:
-[HAPPY] 兀賵 [LOVE] 兀賵 [CURIOUS] 兀賵 [SCARED] 兀賵 [DANCE] 兀賵 [ANGRY] 兀賵 [SLEEPY].`;
+      async queryGeminiEmbodied(userText) {
+        const sensoryContext = `[Sensors] Vision: ${this.emo.vision.getSensoryDescription()} | Phone: ${this.emo.sensors.tiltState} | Current Emotion: ${this.emo.face.emotion}`;
 
-        this.history.push({ role: 'user', parts: [{ text: userText }] });
-        if (this.history.length > 6) this.history = this.history.slice(-6);
+        const systemPrompt = `You are "EMO", an ultra-intelligent, warm, playful 2D companion robot living inside a pure black screen with glowing neon eyes and two articulated top robotic ears.
+You MUST reply ONLY with a valid JSON object (no markdown fences) containing:
+{
+  "reply": "Your natural, warm, expressive reply in Arabic (1 to 2 concise sentences suitable for speech synthesis)",
+  "emotion": "one of: happy, excited, love, curious, thinking, surprised, sad, scared, angry, sleepy, dizzy, dancing, wink, shy, proud, glitch",
+  "ear_action": "one of: perk_up, droop, wiggle_both, tilt_left, tilt_right, bounce_beat, alert_scan",
+  "eye_look": "one of: center, left, right, up, down, user, random_scan",
+  "led_color_override": "optional temporary Hex color like #ff1770 or #ffd60a or null",
+  "sound_effect": "one of: chirp_happy, giggle, love_chime, beep_curious, gasp, sigh, angry_buzz, dance_beat, sleep_snore",
+  "action": "one of: dance_routine, scan_room, sleep_mode, none"
+}`;
 
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.geminiKey}`,
-          {
+        const promptWithContext = `${sensoryContext}\nUser message/event: ${userText}`;
+        const recentHistory = this.history.slice(-8);
+        const contents = [
+          ...recentHistory,
+          { role: 'user', parts: [{ text: promptWithContext }] }
+        ];
+
+        const models = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+        for (const model of models) {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(this.geminiKey)}`;
+          const res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              systemInstruction: { parts: [{ text: sys }] },
-              contents: this.history
+              systemInstruction: { parts: [{ text: systemPrompt }] },
+              contents,
+              generationConfig: {
+                temperature: 0.85,
+                responseMimeType: 'application/json'
+              }
             })
-          }
-        );
-        if (!res.ok) throw new Error('Gemini error');
-        const data = await res.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[HAPPY] 兀賳丕 賲毓賰 丿丕卅賲丕賸 賷丕 氐丿賷賯賷!';
-        this.history.push({ role: 'model', parts: [{ text }] });
-        return text;
+          });
+
+          if (!res.ok) continue;
+          const data = await res.json();
+          const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!rawText) continue;
+
+          const parsed = JSON.parse(rawText);
+
+          this.history.push({ role: 'user', parts: [{ text: userText }] });
+          this.history.push({ role: 'model', parts: [{ text: JSON.stringify(parsed) }] });
+          if (this.history.length > 12) this.history = this.history.slice(-12);
+          localStorage.setItem('emo_chat_history', JSON.stringify(this.history));
+
+          return parsed;
+        }
+        throw new Error('Gemini API unreachable');
       }
 
-      askOffline(text) {
-        const t = text.toLowerCase();
-        if (/賲乇丨亘丕|丕賴賱丕|丕賱爻賱丕賲|賴丕賷|氐亘丕丨|賲爻丕亍/.test(t)) {
-          return '[HAPPY] 兀賴賱丕賸 賷丕 氐丿賷賯賷! 爻毓賷丿 噩丿丕賸 亘乇丐賷鬲賰 賵爻賲丕毓 氐賵鬲賰!';
+      queryOfflineEmbodied(text) {
+        if (text === AR.sensorDark) {
+          return { reply: AR.replyDark, emotion: 'scared', ear_action: 'droop', eye_look: 'random_scan', led_color_override: '#3b82f6', sound_effect: 'gasp', action: 'none' };
         }
-        if (/賰賷賮賰|丕禺亘丕乇賰|卮賱賵賳賰|毓丕賲賱 丕賷賴/.test(t)) {
-          return '[HAPPY] 兀賳丕 亘兀賮囟賱 丨丕賱 賵胤丕賯鬲賷 賲賲鬲丕夭丞 亘賵噩賵丿賰 賲毓賷!';
+        if (text === AR.sensorShake) {
+          return { reply: AR.replyDizzy, emotion: 'dizzy', ear_action: 'wiggle_both', eye_look: 'random_scan', led_color_override: '#f59e0b', sound_effect: 'dizzy', action: 'none' };
         }
-        if (/丕丨亘賰|亘丨亘賰|丨賱賵|噩賲賷賱|乇丕卅毓|匕賰賷/.test(t)) {
-          return '[LOVE] 賵兀賳丕 兀丨亘賰 賰孬賷乇丕賸 賷丕 氐丿賷賯賷 丕賱賲賮囟賱!';
+        if (text === AR.sensorPet) {
+          return { reply: AR.replyPet, emotion: 'love', ear_action: 'wiggle_both', eye_look: 'center', led_color_override: '#ff1770', sound_effect: 'love_chime', action: 'none' };
         }
-        if (/丕乇賯氐|乇賯氐|賲賵爻賷賯賶|睾賳賷/.test(t)) {
-          return '[DANCE] 賴賷丕 亘賳丕 賳乇賯氐 賵賳爻鬲賲鬲毓!';
+        if (text === AR.sensorPoke) {
+          return { reply: AR.replyPoke, emotion: 'angry', ear_action: 'droop', eye_look: 'user', led_color_override: '#ff3b30', sound_effect: 'angry_buzz', action: 'none' };
         }
-        if (/賳賰鬲丞|丕囟丨賰賳賷|囟丨賰賳賷/.test(t)) {
-          return '[HAPPY] 賲乇丞 亘胤丕乇賷丞 夭毓賱鬲 賲賳 丕賱卮丕丨賳貙 賯丕賱鬲賱賴 賱丕 鬲卮丨賳賳賷 毓丕胤賮賷丕賸! 賴丕賴丕賴丕!';
+        if (text.includes('\u0645\u0631\u062d\u0628') || text.includes('\u0627\u0647\u0644') || text.includes('\u0627\u0644\u0633\u0644\u0627\u0645')) {
+          return { reply: AR.replyHello, emotion: 'excited', ear_action: 'wiggle_both', eye_look: 'user', led_color_override: '#ffd60a', sound_effect: 'chirp_happy', action: 'none' };
         }
-        if (/丕賱爻丕毓丞|丕賱賵賯鬲/.test(t)) {
-          const now = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-          return `[CURIOUS] 丕賱爻丕毓丞 丕賱丌賳 賴賷 ${now}.`;
+        if (text.includes('\u0631\u0642\u0635') || text.includes('\u0645\u0648\u0633\u064a\u0642')) {
+          return { reply: AR.replyDance, emotion: 'dancing', ear_action: 'bounce_beat', eye_look: 'center', led_color_override: '#a855f7', sound_effect: 'dance_beat', action: 'dance_routine' };
         }
-        if (/賳丕賲|鬲氐亘丨 毓賱賶 禺賷乇|賳毓爻丕賳/.test(t)) {
-          return '[SLEEPY] 鬲氐亘丨 毓賱賶 禺賷乇 賷丕 氐丿賷賯賷.. 爻兀乇鬲丕丨 賯賱賷賱丕賸.';
+        if (text.includes('\u0646\u0643\u062a')) {
+          return { reply: AR.replyJoke, emotion: 'happy', ear_action: 'wiggle_both', eye_look: 'user', led_color_override: '#ffd60a', sound_effect: 'giggle', action: 'none' };
         }
-        return '[CURIOUS] 兀爻賲毓賰 亘賰賱 丕賴鬲賲丕賲 賷丕 氐丿賷賯賷! 兀禺亘乇賳賷 丕賱賲夭賷丿.';
+        if (text.includes('\u0627\u062d\u0628') || text.includes('\u0628\u062d\u0628')) {
+          return { reply: AR.replyLove, emotion: 'love', ear_action: 'wiggle_both', eye_look: 'user', led_color_override: '#ff1770', sound_effect: 'love_chime', action: 'none' };
+        }
+        if (text.includes('\u0646\u0627\u0645') || text.includes('\u0646\u0639\u0633')) {
+          return { reply: AR.replySleep, emotion: 'sleepy', ear_action: 'droop', eye_look: 'down', led_color_override: '#3b82f6', sound_effect: 'sleep_snore', action: 'sleep_mode' };
+        }
+
+        return {
+          reply: AR.replyDefault,
+          emotion: 'curious',
+          ear_action: 'tilt_left',
+          eye_look: 'user',
+          led_color_override: null,
+          sound_effect: 'beep_curious',
+          action: 'none'
+        };
       }
 
-      deliver(raw) {
-        let emotion = 'HAPPY';
-        let speech = raw;
-        const match = raw.match(/^\[(HAPPY|LOVE|CURIOUS|SCARED|DANCE|ANGRY|SLEEPY)\]\s*/i);
-        if (match) {
-          emotion = match[1].toUpperCase();
-          speech = raw.replace(match[0], '');
+      executeEmbodiedDecision(d) {
+        const emotion = (d.emotion || 'happy').toLowerCase();
+        const earAction = (d.ear_action || 'perk_up').toLowerCase();
+        const eyeLook = (d.eye_look || 'user').toLowerCase();
+        const soundCue = (d.sound_effect || 'chirp_happy').toLowerCase();
+        const action = (d.action || 'none').toLowerCase();
+
+        const isSleep = emotion === 'sleepy' || action === 'sleep_mode';
+        const duration = isSleep ? 0 : (action === 'dance_routine' ? 6.5 : 4.8);
+
+        this.emo.face.setEmotion(emotion, duration);
+        this.emo.face.setEarAction(earAction);
+        this.emo.face.setGazeMode(eyeLook);
+
+        if (d.led_color_override) {
+          this.emo.face.setOverrideColor(d.led_color_override, duration || 5);
         }
 
-        const dur = emotion === 'SLEEPY' ? 0 : 4.2;
-        this.emo.face.setEmotion(emotion, dur);
-        this.emo.sound.playEmotion(emotion);
-        if (emotion === 'LOVE') this.emo.face.spawnParticles('HEART', 5);
-        this.emo.voice.speak(speech);
+        this.emo.sound.playCue(soundCue);
+
+        if (action === 'dance_routine') {
+          this.emo.face.setEmotion('dancing', 6.5);
+          this.emo.face.setEarAction('bounce_beat');
+          this.emo.face.spawnParticles('NOTE', 6);
+        } else if (action === 'scan_room') {
+          this.emo.face.setGazeMode('random_scan');
+          this.emo.face.setEarAction('alert_scan');
+        } else if (emotion === 'love') {
+          this.emo.face.spawnParticles('HEART', 6);
+        } else if (emotion === 'excited' || emotion === 'happy') {
+          this.emo.face.spawnParticles('SPARKLE', 4);
+        }
+
+        if (d.reply) {
+          this.appendChatBubble('emo', d.reply);
+          this.emo.voice.speak(d.reply);
+        }
       }
     }
 
     // ============================================================================
-    // 7. MAIN CONTROLLER & EXPLICIT PERMISSION WORKFLOW
+    // 7. MAIN CONTROLLER & DRAWERS UI
     // ============================================================================
     class EmoCompanion {
       constructor() {
+        hydrateArabicUI();
+
         this.sound = new EmoSound();
         this.voice = new EmoVoice(this);
         this.vision = new EmoVision(this);
@@ -1156,7 +1553,8 @@
         this.brain = new EmoBrain(this);
 
         this.setupPermissionsUI();
-        this.setupSecretDrawerUI();
+        this.setupChatDrawerUI();
+        this.setupSettingsDrawerUI();
         this.startLoop();
       }
 
@@ -1169,71 +1567,130 @@
 
         const markGranted = (btn, ok) => {
           if (ok) {
-            btn.textContent = '鬲賲 丕賱鬲賮毓賷賱 鉁�';
-            btn.className = 'px-3.5 py-2 rounded-xl bg-emerald-500 text-black font-bold text-xs';
+            btn.textContent = AR.btnGranted;
+            btn.className = 'px-3.5 py-2 rounded-xl bg-emerald-500 text-black font-bold text-xs shrink-0';
           } else {
-            btn.textContent = '賲乇賮賵囟 鉁�';
-            btn.className = 'px-3.5 py-2 rounded-xl bg-rose-500 text-white font-bold text-xs';
+            btn.textContent = AR.btnDenied;
+            btn.className = 'px-3.5 py-2 rounded-xl bg-rose-500 text-white font-bold text-xs shrink-0';
           }
         };
 
         btnCam.addEventListener('click', async () => {
-          const ok = await this.vision.requestPermission();
-          markGranted(btnCam, ok);
+          markGranted(btnCam, await this.vision.requestPermission());
         });
 
         btnMic.addEventListener('click', async () => {
-          const ok = await this.voice.requestPermission();
-          markGranted(btnMic, ok);
+          markGranted(btnMic, await this.voice.requestPermission());
         });
 
         btnMotion.addEventListener('click', async () => {
-          const ok = await this.sensors.requestPermission();
-          markGranted(btnMotion, ok);
+          markGranted(btnMotion, await this.sensors.requestPermission());
         });
 
         btnStart.addEventListener('click', () => {
           this.sound.unlock();
           overlay.classList.add('hidden');
-          this.face.setEmotion('HAPPY', 2.8);
-          this.sound.playEmotion('HAPPY');
-          this.voice.speak('兀賴賱丕賸 亘賰! 兀賳丕 廿賷賲賵貙 爻毓賷丿 噩丿丕賸 亘賵噩賵丿賷 賲毓賰!');
+          this.face.setEmotion('excited', 3.5);
+          this.face.setEarAction('wiggle_both');
+          this.face.spawnParticles('SPARKLE', 5);
+          this.sound.playCue('chirp_happy');
+          this.brain.appendChatBubble('emo', AR.welcomeSpeak);
+          this.voice.speak(AR.welcomeSpeak);
         });
       }
 
-      setupSecretDrawerUI() {
-        const drawer = document.getElementById('secretDrawer');
+      setupChatDrawerUI() {
+        const chatDrawer = document.getElementById('chatDrawer');
+        const settingsDrawer = document.getElementById('settingsDrawer');
+        const chatForm = document.getElementById('chatForm');
+        const chatInput = document.getElementById('chatInput');
+        const quickRow = document.getElementById('quickPromptsRow');
+
+        // Populate Unicode-safe quick prompt chips
+        AR.quickChips.forEach(chip => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = chip.label;
+          btn.className = 'px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] text-zinc-200 whitespace-nowrap active:scale-95 transition shrink-0';
+          btn.addEventListener('click', () => {
+            this.brain.processInput(chip.prompt, 'text');
+          });
+          quickRow.appendChild(btn);
+        });
+
+        document.getElementById('btnOpenChat').addEventListener('click', () => {
+          settingsDrawer.classList.replace('drawer-open', 'drawer-closed');
+          chatDrawer.classList.replace('drawer-closed', 'drawer-open');
+        });
+
+        document.getElementById('btnCloseChat').addEventListener('click', () => {
+          chatDrawer.classList.replace('drawer-open', 'drawer-closed');
+        });
+
+        document.getElementById('btnQuickMic').addEventListener('click', () => {
+          this.sound.unlock();
+          this.voice.startListening();
+        });
+
+        document.getElementById('btnChatMic').addEventListener('click', () => {
+          this.sound.unlock();
+          this.voice.startListening();
+        });
+
+        chatForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const val = chatInput.value.trim();
+          if (!val) return;
+          chatInput.value = '';
+          this.brain.processInput(val, 'text');
+        });
+      }
+
+      setupSettingsDrawerUI() {
+        const chatDrawer = document.getElementById('chatDrawer');
+        const settingsDrawer = document.getElementById('settingsDrawer');
         const keyInput = document.getElementById('geminiKeyInput');
         keyInput.value = this.brain.geminiKey;
 
-        document.getElementById('btnCloseDrawer').addEventListener('click', () => {
-          drawer.classList.remove('open');
+        document.getElementById('btnOpenSettings').addEventListener('click', () => {
+          chatDrawer.classList.replace('drawer-open', 'drawer-closed');
+          settingsDrawer.classList.replace('drawer-closed', 'drawer-open');
+        });
+
+        document.getElementById('btnCloseSettings').addEventListener('click', () => {
+          settingsDrawer.classList.replace('drawer-open', 'drawer-closed');
         });
 
         document.getElementById('btnSaveKey').addEventListener('click', () => {
           this.brain.setGeminiKey(keyInput.value);
-          this.sound.playEmotion('HAPPY');
-          drawer.classList.remove('open');
+          this.sound.playCue('chirp_happy');
+          settingsDrawer.classList.replace('drawer-open', 'drawer-closed');
+        });
+
+        document.getElementById('btnClearMemory').addEventListener('click', () => {
+          this.brain.clearMemory();
+          this.sound.playCue('beep_curious');
+          settingsDrawer.classList.replace('drawer-open', 'drawer-closed');
         });
 
         document.querySelectorAll('.neon-swatch').forEach(btn => {
           btn.addEventListener('click', () => {
             document.querySelectorAll('.neon-swatch').forEach(b => b.classList.replace('border-white', 'border-transparent'));
             btn.classList.replace('border-transparent', 'border-white');
-            this.face.setColor(btn.dataset.color);
-            this.sound.playEmotion('HAPPY');
+            this.face.setBaseColor(btn.dataset.color);
+            this.sound.playCue('chirp_happy');
           });
         });
 
         document.getElementById('btnReopenPerms').addEventListener('click', () => {
-          drawer.classList.remove('open');
+          settingsDrawer.classList.replace('drawer-open', 'drawer-closed');
           document.getElementById('permissionOverlay').classList.remove('hidden');
         });
 
         const btnAutoListen = document.getElementById('btnToggleAutoListen');
         btnAutoListen.addEventListener('click', () => {
           this.voice.continuousMode = !this.voice.continuousMode;
-          btnAutoListen.textContent = `馃帣锔� 丕爻鬲賲丕毓 賲爻鬲賲乇: ${this.voice.continuousMode ? '賲賮毓賾賱' : '廿賷賯丕賮'}`;
+          btnAutoListen.textContent = this.voice.continuousMode ? AR.autoListenOn : AR.autoListenOff;
           if (this.voice.continuousMode) {
             this.voice.startListening();
           } else {
